@@ -1,0 +1,37 @@
+name: GCP Cloud Functions Deploy (Staging)
+on:
+  push:
+    branches:
+      - "staging"
+jobs:
+  build-deploy-cloud-function:
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: "auth"
+        uses: "google-github-actions/auth@v0"
+        with:
+          credentials_json: "${{ secrets.GCP_SA_CREDS_JSON }}"
+
+      - id: "deploy"
+        uses: "google-github-actions/deploy-cloud-functions@v0"
+        with:
+          name: "shorty-dev"
+          entry_point: "HandleSignUp"
+          https_trigger_security_level: "secure-always"
+          project_id: "operationspark-org"
+          region: "us-central1"
+          runtime: "go116"
+          env_vars: >-
+            MONGO_URI=${{secrets.MONGO_URI}},
+            API_KEY=${{secrets.API_KEY}},
+            HOST_BASE_URL=${{secrets.HOST_BASE_URL}},
+            APP_ENV=staging
+      - id: "trigger-url"
+        run: 'echo "${{ steps.deploy.outputs.url }}"'
