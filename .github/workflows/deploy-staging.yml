@@ -32,6 +32,7 @@ jobs:
             MONGO_URI=${{secrets.MONGO_URI}},
             API_KEY=${{secrets.API_KEY}},
             HOST_BASE_URL=${{secrets.HOST_BASE_URL}},
-            APP_ENV=staging
+            APP_ENV=staging,
+            GOFLAGS="-mod=mod"
       - id: "trigger-url"
         run: 'echo "${{ steps.deploy.outputs.url }}"'
