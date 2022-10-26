@@ -49,7 +49,6 @@ func TestGETLink(t *testing.T) {
 		name       string
 		endpoint   string
 		wantBody   string
-		wantLink   shorty.Link
 		statusCode int
 	}{
 		{
@@ -77,6 +76,42 @@ func TestGETLink(t *testing.T) {
 			assertResponseBody(t, response.Body.String(), test.wantBody)
 		})
 	}
+}
+
+func TestGETLinks(t *testing.T) {
+	t.Run("returns all the links in the store", func(t *testing.T) {
+		store := inmem.NewStore()
+		store.Store = map[string]shorty.Link{
+			"abc123": {Code: "abc123"},
+		}
+
+		server := handlers.NewService(store)
+
+		wantBody := `[{"shortUrl":"","code":"abc123","customCode":"","originalUrl":"","totalClicks":0,"createdBy":"","createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]` + "\n"
+
+		request, _ := http.NewRequest(http.MethodGet, "/api/urls/", nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusOK)
+		assertResponseBody(t, response.Body.String(), wantBody)
+	})
+
+	t.Run("returns empty list if there a no links in the store", func(t *testing.T) {
+		store := inmem.NewStore()
+		server := handlers.NewService(store)
+
+		wantBody := "[]\n"
+
+		request, _ := http.NewRequest(http.MethodGet, "/api/urls/", nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusOK)
+		assertResponseBody(t, response.Body.String(), wantBody)
+	})
 }
 
 func assertStatus(t testing.TB, got, want int) {

@@ -49,7 +49,11 @@ func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
-	panic("GetLinks not implemented")
+	links := shorty.Links{}
+	for _, l := range i.Store {
+		links = append(links, &l)
+	}
+	return links, nil
 }
 
 func (i *Store) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
