@@ -32,7 +32,7 @@ jobs:
           region: "us-central1"
           runtime: "go116"
           build_environment_variables: >-
-            GOFLAGS="-mod=mod"
+            GOFLAGS=-mod=mod
           env_vars: >-
             MONGO_URI=${{secrets.MONGO_URI}},
             API_KEY=${{secrets.API_KEY}},
