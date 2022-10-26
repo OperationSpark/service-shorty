@@ -6,12 +6,12 @@ import (
 	"os"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
-	"github.com/operationspark/shorty"
+	function "github.com/operationspark/shorty"
 )
 
 func main() {
 	ctx := context.Background()
-	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", shorty.NewMux().ServeHTTP); err != nil {
+	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", function.NewMux().ServeHTTP); err != nil {
 		log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
 	}
 
