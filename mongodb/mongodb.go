@@ -14,7 +14,7 @@ import (
 
 type (
 	// InMemoryShortyStore stores the short links in memory.
-	MongoShortyStore struct {
+	Store struct {
 		Client            *mongo.Client
 		DBName            string
 		URLCollectionName string
@@ -26,10 +26,10 @@ type (
 )
 
 // NewStore creates an empty Shorty store.
-func NewStore(o StoreOpts) (*MongoShortyStore, error) {
+func NewStore(o StoreOpts) (*Store, error) {
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(o.URI))
 	if err != nil {
-		return &MongoShortyStore{}, fmt.Errorf("connect: %v", err)
+		return &Store{}, fmt.Errorf("connect: %v", err)
 	}
 
 	// Ping the primary
@@ -45,18 +45,18 @@ func NewStore(o StoreOpts) (*MongoShortyStore, error) {
 
 	dbName := strings.TrimPrefix(connectionURI.Path, "/")
 	fmt.Println(dbName)
-	return &MongoShortyStore{
+	return &Store{
 		Client:            client,
 		DBName:            dbName,
 		URLCollectionName: "urls",
 	}, nil
 }
 
-func (i *MongoShortyStore) BaseURL() string {
+func (i *Store) BaseURL() string {
 	return "https://ospk.org"
 }
 
-func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
+func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 
 	newLink.GenCode(i.BaseURL())
 
@@ -69,18 +69,18 @@ func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink shorty.Link) 
 	return newLink, nil
 }
 
-func (i *MongoShortyStore) GetLink(ctx context.Context, code string) (shorty.Link, error) {
+func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 	panic("GetLink not implemented")
 }
 
-func (i *MongoShortyStore) GetLinks(ctx context.Context) ([]shorty.Link, error) {
+func (i *Store) GetLinks(ctx context.Context) ([]shorty.Link, error) {
 	panic("GetLinks not implemented")
 }
 
-func (i *MongoShortyStore) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
+func (i *Store) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
 	panic("UpdateLink not implemented")
 }
 
-func (i *MongoShortyStore) DeleteLink(ctx context.Context, code string) (int, error) {
+func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
 	panic("DeleteLink not implemented")
 }

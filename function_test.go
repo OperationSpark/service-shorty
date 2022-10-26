@@ -2,7 +2,6 @@ package function
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,12 +9,10 @@ import (
 	"testing"
 
 	"github.com/operationspark/shorty/handlers"
-	"github.com/operationspark/shorty/mongodb"
+	"github.com/operationspark/shorty/inmem"
 	"github.com/operationspark/shorty/shorty"
 	"github.com/operationspark/shorty/testutil"
 )
-
-var mongoURI = "mongodb://localhost:27017/url-shortener-test"
 
 func TestPOSTLink(t *testing.T) {
 	t.Run("returns the Shorty by code", func(t *testing.T) {
@@ -25,12 +22,7 @@ func TestPOSTLink(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodPost, "/api/links", reqBody)
 		response := httptest.NewRecorder()
 
-		store, err := mongodb.NewStore(mongodb.StoreOpts{URI: mongoURI})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		mustDropDB(t, store)
+		store := inmem.NewStore()
 
 		handlers.NewService(store).ServeHTTP(response, request)
 		var got shorty.Link
@@ -43,11 +35,4 @@ func TestPOSTLink(t *testing.T) {
 		testutil.AssertEqual(t, got.ShortURL, wantShortURL)
 
 	})
-}
-
-func mustDropDB(t *testing.T, store *mongodb.MongoShortyStore) {
-	err := store.Client.Database(store.DBName).Drop(context.Background())
-	if err != nil {
-		t.Fatalf("dropDatabase:%v", err)
-	}
 }
