@@ -11,7 +11,7 @@ type (
 	LinkStore interface {
 		CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
 		GetLink(ctx context.Context, code string) (shorty.Link, error)
-		GetLinks(ctx context.Context) ([]shorty.Link, error)
+		GetLinks(ctx context.Context) (shorty.Links, error)
 		UpdateLink(ctx context.Context, code string) (shorty.Link, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 	}

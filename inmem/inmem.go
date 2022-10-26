@@ -41,7 +41,7 @@ func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 	panic("GetLink not implemented")
 }
 
-func (i *Store) GetLinks(ctx context.Context) ([]shorty.Link, error) {
+func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	panic("GetLinks not implemented")
