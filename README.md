@@ -14,6 +14,80 @@ Create short URLs, resolve shortened URLs, and fetch all shortened URLs
 - Create `.env` file from `.env.example` and populate with correct development variables
 - `go run cmd`
 
+Loosely based on Nic Jackson's [microservice tutorials](https://github.com/nicholasjackson/building-microservices-youtube/tree/episode_4)
+
+### Packages:
+#### shorty
+- Business logic for `Link`s
+- Contains `Store` interface to be implemented in data access layer(s).
+```go
+ShortyStore interface {
+	CreateLink(ctx context.Context, newLink Link) (Link, error)
+	GetLink(ctx context.Context, code string) (Link, error)
+	GetLinks(ctx context.Context) (Links, error)
+	UpdateLink(ctx context.Context, code string) (Link, error)
+	DeleteLink(ctx context.Context, code string) (int, error)
+}
+```
+
+#### handlers
+- HTTP route handlers that call the CRUD methods on the given `store` implementation.
+```go
+func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
+        // Parse JSON body into a link
+        linkInput.FromJSON(r.Body)
+       
+        // Error handling omitted for brevity... 
+
+	// Create and save the short link to the DB
+	newLink, err := s.store.CreateLink(r.Context(), linkInput)
+	
+	// Send new link JSON
+	if err = newLink.ToJSON(w); err != nil {
+		http.Error(w, "Problem marshaling your short link", http.StatusInternalServerError)
+	}
+}
+
+```
+
+#### mongodb
+- Data access layer,  implemented for MongoDB
+
+#### inmem
+- Data access layer implemented for an in-memory store for simpler API testing
+```go
+func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
+	newLink.GenCode(i.BaseURL())
+	i.store[newLink.Code] = newLink
+	return newLink, nil
+}
+```
+
+#### function
+- Entrypoint in to the Cloud function 
+- All packages tied together here:
+```go
+func init() {
+	functions.HTTP("ServeShorty", NewMux().ServeHTTP)
+}
+
+var store shorty.ShortyStore
+
+func NewMux() *http.ServeMux {
+	store, err := initStore()
+	if err != nil {
+		panic(err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/urls", handlers.NewService(store).ServeHTTP)
+	mux.HandleFunc("/", handlers.Resolver)
+
+	return mux
+}
+```
+
+
 #### **Test**
 
 - `go test`
