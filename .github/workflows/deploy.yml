@@ -23,17 +23,17 @@ jobs:
         uses: "google-github-actions/deploy-cloud-functions@v0"
         with:
           name: "shorty"
+          # https://stackoverflow.com/questions/67203641/missing-go-sum-entry-for-module-providing-package-package-name
+          env:
+            GOFLAGS: "-mod=mod"
           entry_point: "ServeShorty"
           https_trigger_security_level: "secure-always"
           project_id: "operationspark-org"
           region: "us-central1"
           runtime: "go116"
-          # https://stackoverflow.com/questions/67203641/missing-go-sum-entry-for-module-providing-package-package-name
-          # GOFLAGS="-mod=mod"
           env_vars: >-
             MONGO_URI=${{secrets.MONGO_URI}},
             API_KEY=${{secrets.API_KEY}},
-            HOST_BASE_URL=${{secrets.HOST_BASE_URL}},
-            GOFLAGS="-mod=mod"
+            HOST_BASE_URL=${{secrets.HOST_BASE_URL}}
       - id: "trigger-url"
         run: 'echo "${{ steps.deploy.outputs.url }}"'
