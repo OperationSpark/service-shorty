@@ -1,4 +1,4 @@
-package shortlink
+package shorty
 
 import (
 	"testing"

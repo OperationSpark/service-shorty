@@ -1,4 +1,4 @@
-package shorty
+package function
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/operationspark/shorty/handlers"
 	"github.com/operationspark/shorty/mongodb"
-	"github.com/operationspark/shorty/shortlink"
+	"github.com/operationspark/shorty/shorty"
 	"github.com/operationspark/shorty/testutil"
 )
 
@@ -33,7 +33,7 @@ func TestPOSTLink(t *testing.T) {
 		mustDropDB(t, store)
 
 		handlers.NewService(store).ServeHTTP(response, request)
-		var got shortlink.ShortLink
+		var got shorty.Link
 		d := json.NewDecoder(response.Body)
 		d.Decode(&got)
 

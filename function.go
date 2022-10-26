@@ -1,4 +1,4 @@
-package shorty
+package function
 
 import (
 	"net/http"

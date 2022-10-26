@@ -4,29 +4,24 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/operationspark/shorty/shortlink"
+	"github.com/operationspark/shorty/shorty"
 )
 
 type (
-	ShortyStore interface {
-		CreateLink(ctx context.Context, newLink shortlink.ShortLink) (shortlink.ShortLink, error)
-		GetLink(ctx context.Context, code string) (shortlink.ShortLink, error)
-		GetLinks(ctx context.Context) ([]shortlink.ShortLink, error)
-		UpdateLink(ctx context.Context, code string) (shortlink.ShortLink, error)
+	LinkStore interface {
+		CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
+		GetLink(ctx context.Context, code string) (shorty.Link, error)
+		GetLinks(ctx context.Context) ([]shorty.Link, error)
+		UpdateLink(ctx context.Context, code string) (shorty.Link, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 	}
 
 	ShortyService struct {
-		store ShortyStore
-	}
-
-	jsonError struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
+		store LinkStore
 	}
 )
 
-func NewService(store ShortyStore) *ShortyService {
+func NewService(store LinkStore) *ShortyService {
 	return &ShortyService{store: store}
 }
 
@@ -48,7 +43,7 @@ func (s *ShortyService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	linkInput := shortlink.ShortLink{}
+	linkInput := shorty.Link{}
 	if err := linkInput.FromJSON(r.Body); err != nil {
 		http.Error(w, "Unable to parse JSON", http.StatusBadRequest)
 	}

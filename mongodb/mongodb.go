@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/operationspark/shorty/shortlink"
+	"github.com/operationspark/shorty/shorty"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -56,7 +56,7 @@ func (i *MongoShortyStore) BaseURL() string {
 	return "https://ospk.org"
 }
 
-func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink shortlink.ShortLink) (shortlink.ShortLink, error) {
+func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 
 	newLink.GenCode(i.BaseURL())
 
@@ -64,20 +64,20 @@ func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink shortlink.Sho
 
 	_, err := coll.InsertOne(ctx, newLink)
 	if err != nil {
-		return shortlink.ShortLink{}, fmt.Errorf("insertOne: %v", err)
+		return shorty.Link{}, fmt.Errorf("insertOne: %v", err)
 	}
 	return newLink, nil
 }
 
-func (i *MongoShortyStore) GetLink(ctx context.Context, code string) (shortlink.ShortLink, error) {
+func (i *MongoShortyStore) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 	panic("GetLink not implemented")
 }
 
-func (i *MongoShortyStore) GetLinks(ctx context.Context) ([]shortlink.ShortLink, error) {
+func (i *MongoShortyStore) GetLinks(ctx context.Context) ([]shorty.Link, error) {
 	panic("GetLinks not implemented")
 }
 
-func (i *MongoShortyStore) UpdateLink(ctx context.Context, code string) (shortlink.ShortLink, error) {
+func (i *MongoShortyStore) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
 	panic("UpdateLink not implemented")
 }
 

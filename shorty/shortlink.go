@@ -1,4 +1,4 @@
-package shortlink
+package shorty
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	ShortLink struct {
+	Link struct {
 		// Shortened URL result. Ex: https://ospk.org/bas12d21dc.
 		ShortURL string `json:"shortUrl" bson:"shortUrl"`
 		// Short Code used as the path of the short URL. Ex: bas12d21dc.
@@ -28,32 +28,32 @@ type (
 		UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	}
 
-	Links []*ShortLink
+	Links []*Link
 
 	ShortyStore interface {
-		CreateLink(ctx context.Context, newLink ShortLink) (ShortLink, error)
-		GetLink(ctx context.Context, code string) (ShortLink, error)
+		CreateLink(ctx context.Context, newLink Link) (Link, error)
+		GetLink(ctx context.Context, code string) (Link, error)
 		GetLinks(ctx context.Context) (Links, error)
-		UpdateLink(ctx context.Context, code string) (ShortLink, error)
+		UpdateLink(ctx context.Context, code string) (Link, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 	}
 )
 
-func (sl *ShortLink) FromJSON(r io.Reader) error {
+func (sl *Link) FromJSON(r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(sl); err != nil {
 		return fmt.Errorf("decode: %v", err)
 	}
 	return nil
 }
 
-func (sl *ShortLink) ToJSON(w io.Writer) error {
+func (sl *Link) ToJSON(w io.Writer) error {
 	if err := json.NewEncoder(w).Encode(sl); err != nil {
 		return fmt.Errorf("encode: %v", err)
 	}
 	return nil
 }
 
-func (sl *ShortLink) GenCode(baseURL string) {
+func (sl *Link) GenCode(baseURL string) {
 	code := CreateCode()
 
 	sl.Code = code
