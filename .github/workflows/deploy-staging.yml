@@ -20,12 +20,12 @@ jobs:
           credentials_json: "${{ secrets.GCP_SA_CREDS_JSON }}"
 
       - id: "deploy"
+        # https://stackoverflow.com/questions/67203641/missing-go-sum-entry-for-module-providing-package-package-name
+        env:
+          GOFLAGS: "-mod=mod"
         uses: "google-github-actions/deploy-cloud-functions@v0"
         with:
           name: "shorty-dev"
-          # https://stackoverflow.com/questions/67203641/missing-go-sum-entry-for-module-providing-package-package-name
-          env:
-            GOFLAGS: "-mod=mod"
           entry_point: "ServeShorty"
           https_trigger_security_level: "secure-always"
           project_id: "operationspark-org"
