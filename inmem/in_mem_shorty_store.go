@@ -4,28 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
-)
 
-type (
-	ShortLink struct {
-		// Shortened URL result. Ex: https://ospk.org/bas12d21dc.
-		ShortURL string `bson:"shortUrl"`
-		// Short Code used as the path of the short URL. Ex: bas12d21dc.
-		Code string `bson:"code"`
-		// Optional custom short code passed when creating or updating the short URL.
-		CustomCode string `bson:"customCode"`
-		// The URL where the short URL redirects.
-		OriginalUrl string `bson:"originalUrl"`
-		// Count of times the short URL has been used.
-		TotalClicks int `bson:"totalClicks"`
-		// Identifier of the entity that created the short URL.
-		CreatedBy string `bson:"createdBy"`
-		// DateTime the URL was created.
-		CreatedAt time.Time `bson:"createdAt"`
-		// DateTime the URL was last updated.
-		UpdatedAt time.Time `bson:"updatedAt"`
-	}
+	"github.com/operationspark/shorty/shortlink"
 )
 
 // NewInMemoryShortyStore creates an empty Shorty store.
@@ -47,7 +27,7 @@ func (i *InMemoryShortyStore) BaseURL() string {
 	return "https://ospk.org"
 }
 
-func (i *InMemoryShortyStore) CreateLink(ctx context.Context, newLink ShortLink) (ShortLink, error) {
+func (i *InMemoryShortyStore) CreateLink(ctx context.Context, newLink shortlink.ShortLink) (shortlink.ShortLink, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -62,19 +42,19 @@ func (i *InMemoryShortyStore) CreateLink(ctx context.Context, newLink ShortLink)
 	return s, nil
 }
 
-func (i *InMemoryShortyStore) GetLink(ctx context.Context, code string) (ShortLink, error) {
+func (i *InMemoryShortyStore) GetLink(ctx context.Context, code string) (shortlink.ShortLink, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	panic("GetLink not implemented")
 }
 
-func (i *InMemoryShortyStore) GetLinks(ctx context.Context) ([]ShortLink, error) {
+func (i *InMemoryShortyStore) GetLinks(ctx context.Context) ([]shortlink.ShortLink, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	panic("GetLinks not implemented")
 }
 
-func (i *InMemoryShortyStore) UpdateLink(ctx context.Context, code string) (ShortLink, error) {
+func (i *InMemoryShortyStore) UpdateLink(ctx context.Context, code string) (shortlink.ShortLink, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	panic("UpdateLink not implemented")
