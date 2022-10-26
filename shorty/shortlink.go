@@ -61,7 +61,7 @@ func (sl *Link) GenCode(baseURL string) {
 	sl.ShortURL = fmt.Sprintf("%s/%s", baseURL, code)
 }
 
-func (l *Links) toJSON(w io.Writer) error {
+func (l *Links) ToJSON(w io.Writer) error {
 	if err := json.NewEncoder(w).Encode(l); err != nil {
 		return fmt.Errorf("encode: %v", err)
 	}

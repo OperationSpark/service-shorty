@@ -36,3 +36,59 @@ func TestPOSTLink(t *testing.T) {
 
 	})
 }
+
+func TestGETLink(t *testing.T) {
+	store := inmem.NewStore()
+	store.Store = map[string]shorty.Link{
+		"abc123": {Code: "abc123"},
+	}
+
+	server := handlers.NewService(store)
+
+	tests := []struct {
+		name       string
+		endpoint   string
+		wantBody   string
+		wantLink   shorty.Link
+		statusCode int
+	}{
+		{
+			name:       "GET abc123",
+			endpoint:   "/abc123",
+			wantBody:   `{"shortUrl":"","code":"abc123","customCode":"","originalUrl":"","totalClicks":0,"createdBy":"","createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}` + "\n",
+			statusCode: http.StatusOK,
+		},
+		{
+			name:       "GET not existent",
+			endpoint:   "/not-a-valid-code",
+			wantBody:   "Link not found: \"not-a-valid-code\"\n",
+			statusCode: http.StatusNotFound,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/urls%s", test.endpoint), nil)
+			response := httptest.NewRecorder()
+
+			server.ServeHTTP(response, request)
+
+			assertStatus(t, response.Code, test.statusCode)
+			assertResponseBody(t, response.Body.String(), test.wantBody)
+		})
+	}
+}
+
+func assertStatus(t testing.TB, got, want int) {
+	t.Helper()
+	if got != want {
+		t.Errorf("did not get correct status, got %d, want %d", got, want)
+	}
+}
+
+func assertResponseBody(t testing.TB, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Errorf("response body is wrong, got %q want %q", got, want)
+	}
+}

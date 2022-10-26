@@ -17,7 +17,7 @@ func NewStore() *Store {
 
 // Store stores the short links in memory.
 type Store struct {
-	store map[string]shorty.Link
+	Store map[string]shorty.Link
 	// A mutex is used to synchronize read/write access to the map
 	lock sync.RWMutex
 }
@@ -31,14 +31,19 @@ func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Lin
 	defer i.lock.Unlock()
 
 	newLink.GenCode(i.BaseURL())
-	i.store[newLink.Code] = newLink
+	i.Store[newLink.Code] = newLink
 	return newLink, nil
 }
 
 func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
-	panic("GetLink not implemented")
+
+	link, ok := i.Store[code]
+	if !ok {
+		return shorty.Link{}, shorty.ErrLinkNotFound
+	}
+	return link, nil
 }
 
 func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {

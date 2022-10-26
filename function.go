@@ -27,7 +27,7 @@ func NewMux() *http.ServeMux {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/urls", handlers.NewService(store).ServeHTTP)
+	mux.HandleFunc("/api/urls/", handlers.NewService(store).ServeHTTP)
 	mux.HandleFunc("/", handlers.Resolver)
 
 	return mux
