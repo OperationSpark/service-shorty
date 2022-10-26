@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/operationspark/shorty/handlers"
+	"github.com/operationspark/shorty/mongodb"
 )
 
 func init() {
@@ -20,14 +22,14 @@ func NewMux() *http.ServeMux {
 		mongoURI = "mongodb://localhost:27017/url-shortener"
 	}
 
-	mongoStore, err := NewMongoShortyStore(MongoStoreOpts{mongoURI})
+	mongoStore, err := mongodb.NewStore(mongodb.StoreOpts{URI: mongoURI})
 	if err != nil {
 		panic(err)
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/urls", NewShortyServer(mongoStore).ServeHTTP)
-	mux.HandleFunc("/", Resolver)
+	mux.HandleFunc("/api/urls", handlers.NewService(mongoStore).ServeHTTP)
+	mux.HandleFunc("/", handlers.Resolver)
 
 	return mux
 }

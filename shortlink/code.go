@@ -1,4 +1,4 @@
-package shorty
+package shortlink
 
 import (
 	"math/rand"

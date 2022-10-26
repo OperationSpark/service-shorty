@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
+	"github.com/operationspark/shorty/shortlink"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -15,38 +15,19 @@ import (
 type (
 	// InMemoryShortyStore stores the short links in memory.
 	MongoShortyStore struct {
-		client            *mongo.Client
-		dbName            string
-		urlCollectionName string
+		Client            *mongo.Client
+		DBName            string
+		URLCollectionName string
 	}
 
-	MongoStoreOpts struct {
-		uri string
-	}
-
-	ShortLinkDB struct {
-		// Shortened URL result. Ex: https://ospk.org/bas12d21dc.
-		ShortURL string `bson:"shortUrl"`
-		// Short Code used as the path of the short URL. Ex: bas12d21dc.
-		Code string `bson:"code"`
-		// Optional custom short code passed when creating or updating the short URL.
-		CustomCode string `bson:"customCode"`
-		// The URL where the short URL redirects.
-		OriginalUrl string `bson:"originalUrl"`
-		// Count of times the short URL has been used.
-		TotalClicks int `bson:"totalClicks"`
-		// Identifier of the entity that created the short URL.
-		CreatedBy string `bson:"createdBy"`
-		// DateTime the URL was created.
-		CreatedAt time.Time `bson:"createdAt"`
-		// DateTime the URL was last updated.
-		UpdatedAt time.Time `bson:"updatedAt"`
+	StoreOpts struct {
+		URI string
 	}
 )
 
-// NewMongoShortyStore creates an empty Shorty store.
-func NewMongoShortyStore(o MongoStoreOpts) (*MongoShortyStore, error) {
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(o.uri))
+// NewStore creates an empty Shorty store.
+func NewStore(o StoreOpts) (*MongoShortyStore, error) {
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(o.URI))
 	if err != nil {
 		return &MongoShortyStore{}, fmt.Errorf("connect: %v", err)
 	}
@@ -57,7 +38,7 @@ func NewMongoShortyStore(o MongoStoreOpts) (*MongoShortyStore, error) {
 	}
 	fmt.Println("Successfully connected and pinged.")
 
-	connectionURI, err := url.Parse(o.uri)
+	connectionURI, err := url.Parse(o.URI)
 	if err != nil {
 		panic(err)
 	}
@@ -65,9 +46,9 @@ func NewMongoShortyStore(o MongoStoreOpts) (*MongoShortyStore, error) {
 	dbName := strings.TrimPrefix(connectionURI.Path, "/")
 	fmt.Println(dbName)
 	return &MongoShortyStore{
-		client:            client,
-		dbName:            dbName,
-		urlCollectionName: "urls",
+		Client:            client,
+		DBName:            dbName,
+		URLCollectionName: "urls",
 	}, nil
 }
 
@@ -75,35 +56,28 @@ func (i *MongoShortyStore) BaseURL() string {
 	return "https://ospk.org"
 }
 
-func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink ShortLink) (ShortLink, error) {
+func (i *MongoShortyStore) CreateLink(ctx context.Context, newLink shortlink.ShortLink) (shortlink.ShortLink, error) {
 
-	code := CreateCode()
-	s := ShortLink{
-		Code:        code,
-		CustomCode:  code,
-		OriginalUrl: newLink.OriginalUrl,
-		ShortURL:    fmt.Sprintf("%s/%s", i.BaseURL(), code),
-	}
+	newLink.GenCode(i.BaseURL())
 
-	coll := i.client.Database(i.dbName).Collection(i.urlCollectionName)
-	doc := ShortLinkDB(s)
+	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
 
-	_, err := coll.InsertOne(ctx, doc)
+	_, err := coll.InsertOne(ctx, newLink)
 	if err != nil {
-		return ShortLink{}, fmt.Errorf("insertOne: %v", err)
+		return shortlink.ShortLink{}, fmt.Errorf("insertOne: %v", err)
 	}
-	return s, nil
+	return newLink, nil
 }
 
-func (i *MongoShortyStore) GetLink(ctx context.Context, code string) (ShortLink, error) {
+func (i *MongoShortyStore) GetLink(ctx context.Context, code string) (shortlink.ShortLink, error) {
 	panic("GetLink not implemented")
 }
 
-func (i *MongoShortyStore) GetLinks(ctx context.Context) ([]ShortLink, error) {
+func (i *MongoShortyStore) GetLinks(ctx context.Context) ([]shortlink.ShortLink, error) {
 	panic("GetLinks not implemented")
 }
 
-func (i *MongoShortyStore) UpdateLink(ctx context.Context, code string) (ShortLink, error) {
+func (i *MongoShortyStore) UpdateLink(ctx context.Context, code string) (shortlink.ShortLink, error) {
 	panic("UpdateLink not implemented")
 }
 

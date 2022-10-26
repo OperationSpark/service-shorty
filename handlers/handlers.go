@@ -26,7 +26,7 @@ type (
 	}
 )
 
-func NewShortyService(store ShortyStore) *ShortyService {
+func NewService(store ShortyStore) *ShortyService {
 	return &ShortyService{store: store}
 }
 

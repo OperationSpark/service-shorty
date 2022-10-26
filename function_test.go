@@ -9,6 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/operationspark/shorty/handlers"
+	"github.com/operationspark/shorty/mongodb"
+	"github.com/operationspark/shorty/shortlink"
 	"github.com/operationspark/shorty/testutil"
 )
 
@@ -22,15 +25,15 @@ func TestPOSTLink(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodPost, "/api/links", reqBody)
 		response := httptest.NewRecorder()
 
-		store, err := NewMongoShortyStore(MongoStoreOpts{mongoURI})
+		store, err := mongodb.NewStore(mongodb.StoreOpts{URI: mongoURI})
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		mustDropDB(t, store)
 
-		NewShortyServer(store).ServeHTTP(response, request)
-		var got ShortLink
+		handlers.NewService(store).ServeHTTP(response, request)
+		var got shortlink.ShortLink
 		d := json.NewDecoder(response.Body)
 		d.Decode(&got)
 
@@ -42,8 +45,8 @@ func TestPOSTLink(t *testing.T) {
 	})
 }
 
-func mustDropDB(t *testing.T, store *MongoShortyStore) {
-	err := store.client.Database(store.dbName).Drop(context.Background())
+func mustDropDB(t *testing.T, store *mongodb.MongoShortyStore) {
+	err := store.Client.Database(store.DBName).Drop(context.Background())
 	if err != nil {
 		t.Fatalf("dropDatabase:%v", err)
 	}
