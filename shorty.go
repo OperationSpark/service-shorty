@@ -30,6 +30,7 @@ type (
 	}
 
 	ShortyStore interface {
+		BaseURL() string
 		CreateLink(ctx context.Context, newLink ShortLink) (ShortLink, error)
 		GetLink(ctx context.Context, code string) (ShortLink, error)
 		GetLinks(ctx context.Context) ([]ShortLink, error)
@@ -67,6 +68,7 @@ func (s *ShortyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			panic("createLink:\n" + err.Error())
 		}
 
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		err = encoder.Encode(newLink)
 		if err != nil {
 			http.Error(w, "Your link was probably created, however, there was a problem responding to your request", http.StatusInternalServerError)
@@ -82,15 +84,28 @@ func (s *ShortyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Problem retrieving links", http.StatusInternalServerError)
 				panic("getLinks: \n" + err.Error())
 			}
-			encoder.Encode(links)
+
+			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+			err = encoder.Encode(links)
+			if err != nil {
+				http.Error(w, "Problem encoding links", http.StatusInternalServerError)
+				panic("encode: " + err.Error())
+			}
 			return
 		}
+
 		link, err := s.store.GetLink(r.Context(), code)
 		if err != nil {
 			http.Error(w, "Problem retrieving link", http.StatusInternalServerError)
 			panic("getLink: \n" + err.Error())
 		}
-		encoder.Encode(link)
+
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		err = encoder.Encode(link)
+		if err != nil {
+			http.Error(w, "Problem encoding link", http.StatusInternalServerError)
+			panic("encode: " + err.Error())
+		}
 		return
 
 		// UPDATE
@@ -107,7 +122,12 @@ func (s *ShortyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			panic("updateLink: \n" + err.Error())
 		}
 
-		encoder.Encode(updatedLink)
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		err = encoder.Encode(updatedLink)
+		if err != nil {
+			http.Error(w, "Problem encoding link", http.StatusInternalServerError)
+			panic("encode: " + err.Error())
+		}
 		return
 
 		// DELETE

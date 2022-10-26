@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", shorty.MainHandler); err != nil {
+	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", shorty.NewMux().ServeHTTP); err != nil {
 		log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
 	}
 

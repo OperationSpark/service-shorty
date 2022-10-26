@@ -23,7 +23,7 @@ jobs:
         uses: "google-github-actions/deploy-cloud-functions@v0"
         with:
           name: "shorty-dev"
-          entry_point: "HandleSignUp"
+          entry_point: "ServeShorty"
           https_trigger_security_level: "secure-always"
           project_id: "operationspark-org"
           region: "us-central1"
