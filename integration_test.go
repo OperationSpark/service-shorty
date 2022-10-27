@@ -166,4 +166,5 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 		testutil.AssertStatus(t, redirectResp.Code, http.StatusPermanentRedirect)
 		testutil.AssertContains(t, redirectResp.Body.String(), originalURL)
 	})
+
 }

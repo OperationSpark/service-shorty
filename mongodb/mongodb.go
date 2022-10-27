@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/operationspark/shorty/shorty"
@@ -45,7 +46,13 @@ func NewStore(o StoreOpts) (*Store, error) {
 	}
 
 	dbName := strings.TrimPrefix(connectionURI.Path, "/")
-	fmt.Println(dbName)
+	envDBName := os.Getenv("MONGO_DB_NAME")
+	if len(envDBName) > 0 {
+		dbName = envDBName
+	}
+
+	fmt.Println("Database name: " + dbName)
+
 	return &Store{
 		Client:            client,
 		DBName:            dbName,
