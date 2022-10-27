@@ -30,7 +30,7 @@ jobs:
       - name: Run Test
         run: |
           GOFLAGS=-mod=mod go install github.com/ory/go-acc
-          GOFLAGS=-mod=mod go-acc -v --covermode=count -o=coverage.out $(go list ./...)
+          GOFLAGS=-mod=mod go-acc --tags=integration --covermode=count -o=coverage.out $(go list ./...)
           GOFLAGS=-mod=mod go tool cover -func=coverage.out -o=coverage.out
 
       - name: Go Coverage Badge # Pass the `coverage.out` output to this action
