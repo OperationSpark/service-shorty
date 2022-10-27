@@ -1,7 +1,6 @@
 package shorty
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,14 +28,6 @@ type (
 	}
 
 	Links []*Link
-
-	ShortyStore interface {
-		CreateLink(ctx context.Context, newLink Link) (Link, error)
-		GetLink(ctx context.Context, code string) (Link, error)
-		GetLinks(ctx context.Context) (Links, error)
-		UpdateLink(ctx context.Context, code string) (Link, error)
-		DeleteLink(ctx context.Context, code string) (int, error)
-	}
 )
 
 func (sl *Link) FromJSON(r io.Reader) error {

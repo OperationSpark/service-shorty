@@ -4,31 +4,45 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/operationspark/shorty/shorty"
 )
 
 type (
 	LinkStore interface {
-		CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
-		GetLink(ctx context.Context, code string) (shorty.Link, error)
-		GetLinks(ctx context.Context) (shorty.Links, error)
-		UpdateLink(ctx context.Context, code string) (shorty.Link, error)
+		SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
+		FindLink(ctx context.Context, code string) (shorty.Link, error)
+		FindAllLinks(ctx context.Context) (shorty.Links, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 	}
 
 	ShortyService struct {
 		store LinkStore
+		// Base service URL. Defaults to https://ospk.org
+		baseURL     string
+		serviceName string
 	}
 )
 
-func NewAPIService(store LinkStore) *ShortyService {
-	return &ShortyService{store: store}
+func NewAPIService(store LinkStore, baseURL string) *ShortyService {
+	_baseURL := "https://ospk.org"
+	if len(baseURL) > 0 {
+		_baseURL = baseURL
+	}
+
+	return &ShortyService{
+		store:       store,
+		baseURL:     _baseURL,
+		serviceName: "system",
+	}
 }
 
-func NewMux(store shorty.ShortyStore) *http.ServeMux {
-	service := NewAPIService(store)
+func NewMux(store LinkStore) *http.ServeMux {
+	baseURL := os.Getenv("HOST_BASE_URL")
+	service := NewAPIService(store, baseURL)
 	mux := http.NewServeMux()
 	// Find better way to ignore trailing "/"
 	mux.HandleFunc("/api/urls", service.ServeAPI)
@@ -36,6 +50,9 @@ func NewMux(store shorty.ShortyStore) *http.ServeMux {
 	mux.HandleFunc("/", service.ServeResolver)
 
 	return mux
+}
+func (s *ShortyService) BaseURL() string {
+	return s.baseURL
 }
 
 func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
@@ -66,14 +83,14 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code := parseLinkCode(r.URL.Path)
-	link, err := s.store.GetLink(r.Context(), code)
+	link, err := s.store.FindLink(r.Context(), code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			http.Error(w, fmt.Sprintf("Not Found. Code: %q", code), http.StatusNotFound)
 			return
 		}
 		http.Error(w, "Could not resolve link", http.StatusInternalServerError)
-		panic(fmt.Errorf("getLink: %v", err))
+		panic(fmt.Errorf("findLink: %v", err))
 	}
 
 	http.Redirect(w, r, link.OriginalUrl, http.StatusPermanentRedirect)
@@ -93,10 +110,15 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Create and save the short link to the DB
-	newLink, err := s.store.CreateLink(r.Context(), linkInput)
+	linkInput.GenCode(s.BaseURL())
+	linkInput.UpdatedAt = time.Now()
+	linkInput.CreatedAt = time.Now()
+	linkInput.CreatedBy = s.serviceName
+
+	newLink, err := s.store.SaveLink(r.Context(), linkInput)
 	if err != nil {
 		http.Error(w, "Problem creating short link", http.StatusInternalServerError)
-		panic(fmt.Errorf("createLink: CreateLink: %v", err))
+		panic(fmt.Errorf("createLink: SaveLink: %v", err))
 	}
 
 	// Send new link JSON
@@ -108,7 +130,7 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 
 func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 	code := parseLinkCode(r.URL.Path)
-	link, err := s.store.GetLink(r.Context(), code)
+	link, err := s.store.FindLink(r.Context(), code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			http.Error(
@@ -124,16 +146,16 @@ func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("Could not retrieve link: %q\n", code),
 			http.StatusInternalServerError,
 		)
-		panic(fmt.Errorf("getLinks: GetLinks: %v", err))
+		panic(fmt.Errorf("getLinks: FindLink: %v", err))
 	}
 	link.ToJSON(w)
 }
 
 func (s *ShortyService) getLinks(w http.ResponseWriter, r *http.Request) {
-	links, err := s.store.GetLinks(r.Context())
+	links, err := s.store.FindAllLinks(r.Context())
 	if err != nil {
 		http.Error(w, "Could not retrieve links", http.StatusInternalServerError)
-		panic(fmt.Errorf("getLinks: GetLinks: %v", err))
+		panic(fmt.Errorf("getLinks: FindAllLinks: %v", err))
 	}
 
 	if err = links.ToJSON(w); err != nil {

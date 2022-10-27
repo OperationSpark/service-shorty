@@ -60,14 +60,9 @@ func NewStore(o StoreOpts) (*Store, error) {
 	}, nil
 }
 
-func (i *Store) BaseURL() string {
-	return "https://ospk.org"
-}
-
-func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
-	newLink.GenCode(i.BaseURL())
+func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
-
+	// TODO: Maybe use upsert
 	_, err := coll.InsertOne(ctx, newLink)
 	if err != nil {
 		return shorty.Link{}, fmt.Errorf("insertOne: %v", err)
@@ -75,7 +70,7 @@ func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Lin
 	return newLink, nil
 }
 
-func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
+func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) {
 	var link shorty.Link
 	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
 
@@ -94,7 +89,7 @@ func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 	return link, nil
 }
 
-func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {
+func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
 	cur, err := coll.Find(ctx, bson.D{{}})
 	if err != nil {
