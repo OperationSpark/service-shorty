@@ -96,7 +96,7 @@ func TestPOSTLinkIntegration(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
 		response := httptest.NewRecorder()
 
-		store := &mongodb.Store{Client: dbClient, DBName: dbName, URLCollectionName: urlCollName}
+		store := &mongodb.Store{Client: dbClient, DBName: dbName, LinksCollName: urlCollName}
 
 		handlers.NewMux(store).ServeHTTP(response, request)
 
@@ -116,9 +116,9 @@ func TestPOSTLinkIntegration(t *testing.T) {
 		response := httptest.NewRecorder()
 
 		store := &mongodb.Store{
-			Client:            dbClient,
-			DBName:            dbName,
-			URLCollectionName: urlCollName,
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
 		}
 		handlers.NewMux(store).ServeHTTP(response, request)
 
@@ -133,13 +133,13 @@ func TestPOSTLinkIntegration(t *testing.T) {
 func TestGETLinksIntegration(t *testing.T) {
 	t.Run("returns all the links in the store", func(t *testing.T) {
 		store := &mongodb.Store{
-			Client:            dbClient,
-			DBName:            dbName,
-			URLCollectionName: urlCollName,
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
 		}
 
 		seedData := shorty.Link{Code: "abc1234"}
-		store.Client.Database(store.DBName).Collection(store.URLCollectionName).InsertOne(context.Background(), seedData)
+		store.Client.Database(store.DBName).Collection(store.LinksCollName).InsertOne(context.Background(), seedData)
 
 		server := handlers.NewMux(store)
 
@@ -159,9 +159,9 @@ func TestGETLinksIntegration(t *testing.T) {
 func TestCreateLinkAndRedirect(t *testing.T) {
 	t.Run("creates and uses a short link", func(t *testing.T) {
 		store := &mongodb.Store{
-			Client:            dbClient,
-			DBName:            dbName,
-			URLCollectionName: urlCollName,
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
 		}
 
 		server := handlers.NewMux(store)

@@ -17,9 +17,9 @@ import (
 type (
 	// InMemoryShortyStore stores the short links in memory.
 	Store struct {
-		Client            *mongo.Client
-		DBName            string
-		URLCollectionName string
+		Client        *mongo.Client
+		DBName        string
+		LinksCollName string
 	}
 
 	StoreOpts struct {
@@ -40,28 +40,48 @@ func NewStore(o StoreOpts) (*Store, error) {
 	}
 	fmt.Println("Successfully connected and pinged.")
 
+	// Grab the DB Name from the connection URI or Env vars
 	connectionURI, err := url.Parse(o.URI)
 	if err != nil {
 		panic(err)
 	}
-
 	dbName := strings.TrimPrefix(connectionURI.Path, "/")
 	envDBName := os.Getenv("MONGO_DB_NAME")
 	if len(envDBName) > 0 {
 		dbName = envDBName
 	}
-
 	fmt.Println("Database name: " + dbName)
 
-	return &Store{
-		Client:            client,
-		DBName:            dbName,
-		URLCollectionName: "urls",
-	}, nil
+	s := Store{
+		Client:        client,
+		DBName:        dbName,
+		LinksCollName: "urls",
+	}
+
+	err = s.CreateCodeIndex(context.Background())
+	if err != nil {
+		return &s, fmt.Errorf("createCodeIndex: %v", err)
+	}
+	return &s, nil
+}
+
+// CreateCodeIndex creates an index on the 'code' field in the urls collection
+func (i *Store) CreateCodeIndex(ctx context.Context) error {
+	indexModel := mongo.IndexModel{Keys: bson.D{{"code", 1}}}
+
+	_, err := i.Client.
+		Database(i.DBName).
+		Collection(i.LinksCollName).
+		Indexes().
+		CreateOne(ctx, indexModel)
+	if err != nil {
+		return fmt.Errorf("createOne: %v", err)
+	}
+	return nil
 }
 
 func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
-	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	// TODO: Maybe use upsert
 	_, err := coll.InsertOne(ctx, newLink)
 	if err != nil {
@@ -72,7 +92,7 @@ func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link,
 
 func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) {
 	var link shorty.Link
-	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 
 	res := coll.FindOne(ctx, bson.D{{"code", code}})
 	if res.Err() != nil {
@@ -90,7 +110,7 @@ func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) 
 }
 
 func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
-	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	cur, err := coll.Find(ctx, bson.D{{}})
 	if err != nil {
 		return shorty.Links{}, fmt.Errorf("find: %v", err)
