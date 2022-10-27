@@ -37,7 +37,7 @@ jobs:
           --allow-unauthenticated
           --entry-point=ServeShorty
           --project=operationspark-org
+          --set-build-env-vars=GOFLAGS=-mod=mod
           --set-env-vars=MONGO_URI=${{secrets.MONGO_URI}},MONGO_DB_NAME=${{secrets.MONGO_DB_NAME}},API_KEY=${{secrets.API_KEY}},HOST_BASE_URL=${{secrets.HOST_BASE_URL}}
-          --set-build-env-vars=GOFLAGS='-mod=mod'
       - id: "trigger-url"
         run: 'echo "${{ steps.deploy.outputs.url }}"'
