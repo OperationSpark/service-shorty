@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/operationspark/shorty/handlers"
@@ -106,6 +107,63 @@ func TestPOSTLinkIntegration(t *testing.T) {
 		testutil.AssertEqual(t, len(got.Code), 10)
 		wantShortURL := fmt.Sprintf("https://ospk.org/%s", got.Code)
 		testutil.AssertEqual(t, got.ShortURL, wantShortURL)
+	})
+}
 
+func TestGETLinksIntegration(t *testing.T) {
+	t.Run("returns all the links in the store", func(t *testing.T) {
+		store := &mongodb.Store{
+			Client:            dbClient,
+			DBName:            "url-shortener-test",
+			URLCollectionName: "urls",
+		}
+
+		seedData := shorty.Link{Code: "abc1234"}
+		store.Client.Database(store.DBName).Collection(store.URLCollectionName).InsertOne(context.Background(), seedData)
+
+		server := handlers.NewMux(store)
+
+		wantContained := `"code":"abc1234"`
+
+		request, _ := http.NewRequest(http.MethodGet, "/api/urls/", nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusOK)
+		testutil.AssertContains(t, response.Body.String(), wantContained)
+
+	})
+}
+
+func TestCreateLinkAndRedirect(t *testing.T) {
+	t.Run("creates and uses a short link", func(t *testing.T) {
+		store := &mongodb.Store{
+			Client:            dbClient,
+			DBName:            "url-shortener-test",
+			URLCollectionName: "urls",
+		}
+
+		server := handlers.NewMux(store)
+
+		originalURL := "https://greenlight.operationspark.org/dashboard?subview=overview"
+		createLinkBody := strings.NewReader(fmt.Sprintf(`{"originalUrl": %q }`, originalURL))
+		createLinkReq, _ := http.NewRequest(http.MethodPost, "/api/urls/", createLinkBody)
+		createLinkResp := httptest.NewRecorder()
+
+		// POST to create a new short link
+		server.ServeHTTP(createLinkResp, createLinkReq)
+
+		var newLink shorty.Link
+		json.NewDecoder(createLinkResp.Body).Decode(&newLink)
+
+		// Use new short link
+		useLinkReq, _ := http.NewRequest(http.MethodGet, "/"+newLink.Code, nil)
+		redirectResp := httptest.NewRecorder()
+
+		server.ServeHTTP(redirectResp, useLinkReq)
+
+		testutil.AssertStatus(t, redirectResp.Code, http.StatusPermanentRedirect)
+		testutil.AssertContains(t, redirectResp.Body.String(), originalURL)
 	})
 }

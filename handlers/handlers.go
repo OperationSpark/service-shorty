@@ -64,6 +64,19 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Only GET requests are accepted\n", http.StatusMethodNotAllowed)
 		return
 	}
+
+	code := parseLinkCode(r.URL.Path)
+	link, err := s.store.GetLink(r.Context(), code)
+	if err != nil {
+		if err == shorty.ErrLinkNotFound {
+			http.Error(w, fmt.Sprintf("Not Found. Code: %q", code), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Could not resolve link", http.StatusInternalServerError)
+		panic(fmt.Errorf("getLink: %v", err))
+	}
+
+	http.Redirect(w, r, link.OriginalUrl, http.StatusPermanentRedirect)
 }
 
 func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {

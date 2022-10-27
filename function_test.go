@@ -72,8 +72,8 @@ func TestGETLink(t *testing.T) {
 
 			server.ServeHTTP(response, request)
 
-			assertStatus(t, response.Code, test.statusCode)
-			assertResponseBody(t, response.Body.String(), test.wantBody)
+			testutil.AssertStatus(t, response.Code, test.statusCode)
+			testutil.AssertResponseBody(t, response.Body.String(), test.wantBody)
 		})
 	}
 }
@@ -94,8 +94,8 @@ func TestGETLinks(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		assertStatus(t, response.Code, http.StatusOK)
-		assertResponseBody(t, response.Body.String(), wantBody)
+		testutil.AssertStatus(t, response.Code, http.StatusOK)
+		testutil.AssertResponseBody(t, response.Body.String(), wantBody)
 	})
 
 	t.Run("returns empty list if there a no links in the store", func(t *testing.T) {
@@ -109,21 +109,7 @@ func TestGETLinks(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		assertStatus(t, response.Code, http.StatusOK)
-		assertResponseBody(t, response.Body.String(), wantBody)
+		testutil.AssertStatus(t, response.Code, http.StatusOK)
+		testutil.AssertResponseBody(t, response.Body.String(), wantBody)
 	})
-}
-
-func assertStatus(t testing.TB, got, want int) {
-	t.Helper()
-	if got != want {
-		t.Errorf("did not get correct status, got %d, want %d", got, want)
-	}
-}
-
-func assertResponseBody(t testing.TB, got, want string) {
-	t.Helper()
-	if got != want {
-		t.Errorf("response body is wrong, got %q want %q", got, want)
-	}
 }
