@@ -26,11 +26,7 @@ func NewMux() *http.ServeMux {
 		panic(err)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/urls/", handlers.NewService(store).ServeHTTP)
-	mux.HandleFunc("/", handlers.Resolver)
-
-	return mux
+	return handlers.NewMux(store)
 }
 
 // InitStore initializes the ShortyStore to either a MongoDB or an in-memory implementation.
