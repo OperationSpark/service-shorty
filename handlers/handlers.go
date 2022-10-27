@@ -23,11 +23,22 @@ type (
 	}
 )
 
-func NewService(store LinkStore) *ShortyService {
+func NewAPIService(store LinkStore) *ShortyService {
 	return &ShortyService{store: store}
 }
 
-func (s *ShortyService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func NewMux(store shorty.ShortyStore) *http.ServeMux {
+	service := NewAPIService(store)
+	mux := http.NewServeMux()
+	// Find better way to ignore trailing "/"
+	mux.HandleFunc("/api/urls", service.ServeAPI)
+	mux.HandleFunc("/api/urls/", service.ServeAPI)
+	mux.HandleFunc("/", service.ServeResolver)
+
+	return mux
+}
+
+func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		s.createLink(w, r)
@@ -45,6 +56,13 @@ func (s *ShortyService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		// TODO: DELETE
 	case http.MethodDelete:
+	}
+}
+
+func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET requests are accepted\n", http.StatusMethodNotAllowed)
+		return
 	}
 }
 

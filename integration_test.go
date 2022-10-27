@@ -86,17 +86,17 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestPOSTLink(t *testing.T) {
+func TestPOSTLinkIntegration(t *testing.T) {
 	t.Run("returns the Shorty by code", func(t *testing.T) {
 		ogURL := "https://operationspark.org"
 		reqBody := bytes.NewReader([]byte(fmt.Sprintf(`{"originalUrl":%q}`, ogURL)))
 
-		request, _ := http.NewRequest(http.MethodPost, "/api/links", reqBody)
+		request, _ := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
 		response := httptest.NewRecorder()
 
 		store := &mongodb.Store{Client: dbClient, DBName: "url-shortener-test", URLCollectionName: "urls"}
 
-		handlers.NewService(store).ServeHTTP(response, request)
+		handlers.NewMux(store).ServeHTTP(response, request)
 
 		var got shorty.Link
 		d := json.NewDecoder(response.Body)
