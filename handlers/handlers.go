@@ -85,9 +85,13 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 	linkInput := shorty.Link{}
 	if err := linkInput.FromJSON(r.Body); err != nil {
 		http.Error(w, "Unable to parse JSON", http.StatusBadRequest)
-		panic(fmt.Errorf("createLink: fromJSON: %v", err))
+		return
 	}
 
+	if len(linkInput.OriginalUrl) == 0 {
+		http.Error(w, `"originalUrl" field required.`, http.StatusBadRequest)
+		return
+	}
 	// Create and save the short link to the DB
 	newLink, err := s.store.CreateLink(r.Context(), linkInput)
 	if err != nil {
