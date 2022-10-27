@@ -23,11 +23,22 @@ type (
 	}
 )
 
-func NewService(store LinkStore) *ShortyService {
+func NewAPIService(store LinkStore) *ShortyService {
 	return &ShortyService{store: store}
 }
 
-func (s *ShortyService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func NewMux(store shorty.ShortyStore) *http.ServeMux {
+	service := NewAPIService(store)
+	mux := http.NewServeMux()
+	// Find better way to ignore trailing "/"
+	mux.HandleFunc("/api/urls", service.ServeAPI)
+	mux.HandleFunc("/api/urls/", service.ServeAPI)
+	mux.HandleFunc("/", service.ServeResolver)
+
+	return mux
+}
+
+func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		s.createLink(w, r)
@@ -48,15 +59,39 @@ func (s *ShortyService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET requests are accepted\n", http.StatusMethodNotAllowed)
+		return
+	}
+
+	code := parseLinkCode(r.URL.Path)
+	link, err := s.store.GetLink(r.Context(), code)
+	if err != nil {
+		if err == shorty.ErrLinkNotFound {
+			http.Error(w, fmt.Sprintf("Not Found. Code: %q", code), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Could not resolve link", http.StatusInternalServerError)
+		panic(fmt.Errorf("getLink: %v", err))
+	}
+
+	http.Redirect(w, r, link.OriginalUrl, http.StatusPermanentRedirect)
+}
+
 func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	linkInput := shorty.Link{}
 	if err := linkInput.FromJSON(r.Body); err != nil {
 		http.Error(w, "Unable to parse JSON", http.StatusBadRequest)
-		panic(fmt.Errorf("createLink: fromJSON: %v", err))
+		return
 	}
 
+	if len(linkInput.OriginalUrl) == 0 {
+		http.Error(w, `"originalUrl" field required.`, http.StatusBadRequest)
+		return
+	}
 	// Create and save the short link to the DB
 	newLink, err := s.store.CreateLink(r.Context(), linkInput)
 	if err != nil {
