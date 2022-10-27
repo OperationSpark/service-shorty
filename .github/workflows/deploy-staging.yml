@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "staging"
+      - "feat/mvp"
 jobs:
   build-deploy-cloud-function:
     permissions:
@@ -32,6 +33,7 @@ jobs:
             GOFLAGS=-mod=mod
           env_vars: >-
             MONGO_URI=${{secrets.MONGO_URI}},
+            MONGO_DB_NAME=${{secrets.MONGO_DB_NAME}},
             API_KEY=${{secrets.API_KEY}},
             HOST_BASE_URL=${{secrets.HOST_BASE_URL}},
             APP_ENV=staging,
