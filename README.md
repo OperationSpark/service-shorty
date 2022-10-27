@@ -1,5 +1,5 @@
 # **URL Shortening Service (Go)**
-![Coverage](https://img.shields.io/badge/Coverage-40.0%25-yellow)
+![Coverage](https://img.shields.io/badge/Coverage-64.9%25-yellow)
 
 Create short URLs, resolve shortened URLs, and fetch all shortened URLs
 
