@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/operationspark/shorty/shorty"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -57,9 +58,7 @@ func (i *Store) BaseURL() string {
 }
 
 func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
-
 	newLink.GenCode(i.BaseURL())
-
 	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
 
 	_, err := coll.InsertOne(ctx, newLink)
@@ -70,11 +69,35 @@ func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Lin
 }
 
 func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
-	panic("GetLink not implemented")
+	var link shorty.Link
+	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
+
+	res := coll.FindOne(ctx, bson.D{{"code", code}})
+	if res.Err() != nil {
+		if res.Err() == mongo.ErrNoDocuments {
+			return link, shorty.ErrLinkNotFound
+		}
+		return link, fmt.Errorf("findOne: %v", res.Err())
+	}
+
+	err := res.Decode(&link)
+	if err != nil {
+		return link, fmt.Errorf("decode: %v", err)
+	}
+	return link, nil
 }
 
 func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {
-	panic("GetLinks not implemented")
+	coll := i.Client.Database(i.DBName).Collection(i.URLCollectionName)
+	cur, err := coll.Find(ctx, bson.D{{}})
+	if err != nil {
+		return shorty.Links{}, fmt.Errorf("find: %v", err)
+	}
+	defer cur.Close(ctx)
+
+	links := make(shorty.Links, cur.RemainingBatchLength())
+	cur.All(ctx, &links)
+	return links, nil
 }
 
 func (i *Store) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
