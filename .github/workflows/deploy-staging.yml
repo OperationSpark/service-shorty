@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "staging"
+      - "feat/mvp"
 jobs:
   build-deploy-cloud-function:
     permissions:
@@ -19,22 +20,27 @@ jobs:
         with:
           credentials_json: "${{ secrets.GCP_SA_CREDS_JSON }}"
 
+      # Workaround to support Gen2 Cloud Functions
+      # https://github.com/google-github-actions/deploy-cloud-functions/issues/304
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v0"
+
       - id: "deploy"
-        uses: "google-github-actions/deploy-cloud-functions@v0"
-        with:
-          name: "shorty-dev"
-          entry_point: "ServeShorty"
-          https_trigger_security_level: "secure-always"
-          project_id: "operationspark-org"
-          region: "us-central1"
-          runtime: "go116"
-          build_environment_variables: >-
-            GOFLAGS=-mod=mod
-          env_vars: >-
-            MONGO_URI=${{secrets.MONGO_URI}},
-            API_KEY=${{secrets.API_KEY}},
-            HOST_BASE_URL=${{secrets.HOST_BASE_URL}},
-            APP_ENV=staging,
-            GOFLAGS="-mod=mod"
+        run: >
+          gcloud
+          functions
+          deploy
+          shorty-dev
+          --gen2
+          --region=us-central1
+          --source=.
+          --runtime=go116
+          --trigger-http
+          --allow-unauthenticated
+          --entry-point=ServeShorty
+          --max-instances=5
+          --project=operationspark-org
+          --set-build-env-vars=GOFLAGS=-mod=mod
+          --set-env-vars=MONGO_URI="${{secrets.MONGO_URI}}",MONGO_DB_NAME="${{secrets.MONGO_DB_NAME}}",API_KEY="${{secrets.API_KEY}}",HOST_BASE_URL="${{secrets.HOST_BASE_URL}}"
       - id: "trigger-url"
         run: 'echo "${{ steps.deploy.outputs.url }}"'
