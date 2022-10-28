@@ -59,6 +59,8 @@ func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
 }
 
 func (i *Store) CheckCodeInUse(ctx context.Context, code string) (bool, error) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
 	_, err := i.FindLink(ctx, code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
@@ -69,4 +71,19 @@ func (i *Store) CheckCodeInUse(ctx context.Context, code string) (bool, error) {
 	}
 	// Code found
 	return true, nil
+}
+
+func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, error) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	link, err := i.FindLink(ctx, code)
+	if err != nil {
+		return 0, err
+	}
+	link.TotalClicks++
+	_, err = i.SaveLink(ctx, link)
+	if err != nil {
+		return 0, err
+	}
+	return link.TotalClicks, nil
 }

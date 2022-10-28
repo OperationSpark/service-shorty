@@ -61,20 +61,23 @@ func NewStore(o StoreOpts) (*Store, error) {
 		LinksCollName: "urls",
 	}
 
-	err = s.CreateCodeIndex(context.Background())
-	if err != nil {
-		return &s, fmt.Errorf("createCodeIndex: %v", err)
-	}
 	return &s, nil
 }
 
 // CreateCodeIndex creates an index on the 'code' field in the urls collection
 func (i *Store) CreateCodeIndex(ctx context.Context) error {
-	indexModel := mongo.IndexModel{Keys: bson.D{{"code", 1}}}
+	collection := i.Client.Database(i.DBName).Collection(i.LinksCollName)
+	indexModel := mongo.IndexModel{
+		Keys:    bson.D{{"code", 1}},
+		Options: options.Index().SetUnique(true),
+	}
 
-	_, err := i.Client.
-		Database(i.DBName).
-		Collection(i.LinksCollName).
+	// Remove existing index to update
+	_, err := collection.Indexes().DropOne(ctx, "code_1")
+	if err != nil {
+		return fmt.Errorf("dropOne: %v", err)
+	}
+	_, err = collection.
 		Indexes().
 		CreateOne(ctx, indexModel)
 	if err != nil {
@@ -91,6 +94,20 @@ func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link,
 		return shorty.Link{}, fmt.Errorf("insertOne: %v", err)
 	}
 	return newLink, nil
+}
+
+func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
+	res, err := coll.UpdateOne(
+		ctx,
+		bson.D{{"code", code}},
+		bson.D{
+			{"$inc", bson.D{{"totalClicks", 1}}}},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("updateOne: %v", err)
+	}
+	return int(res.ModifiedCount), nil
 }
 
 func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) {

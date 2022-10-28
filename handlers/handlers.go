@@ -18,6 +18,7 @@ type (
 		FindAllLinks(ctx context.Context) (shorty.Links, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 		CheckCodeInUse(ctx context.Context, code string) (bool, error)
+		IncrementTotalClicks(ctx context.Context, code string) (int, error)
 	}
 
 	ShortyService struct {
@@ -95,6 +96,11 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		panic(fmt.Errorf("findLink: %v", err))
 	}
 
+	_, err = s.store.IncrementTotalClicks(r.Context(), code)
+	if err != nil {
+		// Redirect even if there is an error. Client should not suffer if the clicks can't be updated.
+		fmt.Fprintf(os.Stderr, "could not update TotalClick count")
+	}
 	http.Redirect(w, r, link.OriginalUrl, http.StatusPermanentRedirect)
 }
 
