@@ -8,7 +8,6 @@ import (
 	"github.com/operationspark/shorty/handlers"
 	"github.com/operationspark/shorty/inmem"
 	"github.com/operationspark/shorty/mongodb"
-	"github.com/operationspark/shorty/shorty"
 )
 
 func init() {
@@ -18,7 +17,7 @@ func init() {
 	functions.HTTP("ServeShorty", NewMux().ServeHTTP)
 }
 
-var store shorty.ShortyStore
+var store handlers.LinkStore
 
 func NewMux() *http.ServeMux {
 	store, err := initStore()
@@ -26,15 +25,11 @@ func NewMux() *http.ServeMux {
 		panic(err)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/urls/", handlers.NewService(store).ServeHTTP)
-	mux.HandleFunc("/", handlers.Resolver)
-
-	return mux
+	return handlers.NewMux(store)
 }
 
 // InitStore initializes the ShortyStore to either a MongoDB or an in-memory implementation.
-func initStore() (shorty.ShortyStore, error) {
+func initStore() (handlers.LinkStore, error) {
 	if os.Getenv("CI") == "true" {
 		return inmem.NewStore(), nil
 	}
