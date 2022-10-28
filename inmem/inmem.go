@@ -52,10 +52,10 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	return links, nil
 }
 
-func (i *Store) UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, error) {
+func (i *Store) UpdateLink(ctx context.Context, code string, link shorty.Link) (shorty.Link, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	oldLink, err := i.FindLink(ctx, link.Code)
+	oldLink, err := i.FindLink(ctx, code)
 	if err != nil {
 		return link, err
 	}
@@ -70,7 +70,7 @@ func (i *Store) UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, 
 		oldLink.Code = link.CustomCode
 		oldLink.CustomCode = link.CustomCode
 	}
-	i.Store[link.Code] = oldLink
+	i.Store[code] = oldLink
 	return oldLink, nil
 }
 

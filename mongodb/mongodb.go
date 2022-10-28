@@ -146,7 +146,7 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	return links, nil
 }
 
-func (i *Store) UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, error) {
+func (i *Store) UpdateLink(ctx context.Context, code string, link shorty.Link) (shorty.Link, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 
 	updateDoc := bson.D{
@@ -165,7 +165,7 @@ func (i *Store) UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, 
 	}
 	res, err := coll.UpdateOne(
 		ctx,
-		bson.D{{"code", link.Code}},
+		bson.D{{"code", code}},
 		bson.D{{"$set", updateDoc}},
 	)
 

@@ -203,9 +203,49 @@ func TestUPDATELinksIntegration(t *testing.T) {
 		testutil.AssertEqual(t, updatedLink.OriginalUrl, newURL)
 	})
 
+	t.Run("404s if code not found", func(t *testing.T) {
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+
+		server := handlers.NewMux(store)
+		request, _ := http.NewRequest(http.MethodPut, "/api/urls/notacode", strings.NewReader(`{}`))
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusNotFound)
+
+	})
+
 	t.Run("updates 'customCode' field", func(t *testing.T) {
-		t.Skip("TODO")
-		// TODO: Make sure customCode, code, and shortUrl fields all updated
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+
+		server := handlers.NewMux(store)
+		createReq, _ := http.NewRequest(http.MethodPost, "/api/urls", strings.NewReader(`{"originalUrl":"https://netflix.com"}`))
+		createResp := httptest.NewRecorder()
+
+		server.ServeHTTP(createResp, createReq)
+		testutil.AssertStatus(t, createResp.Code, http.StatusCreated)
+
+		var toUpdate shorty.Link
+		toUpdate.FromJSON(createResp.Body)
+		updateReq, _ := http.NewRequest(http.MethodPut, "/api/urls/"+toUpdate.Code, strings.NewReader(`{"customCode":"nflx"}`))
+		updateResp := httptest.NewRecorder()
+
+		server.ServeHTTP(updateResp, updateReq)
+
+		testutil.AssertStatus(t, updateResp.Code, http.StatusOK)
+		// Make sure customCode, code, and shortUrl fields all updated
+		testutil.AssertContains(t, updateResp.Body.String(), `"customCode":"nflx"`)
+		testutil.AssertContains(t, updateResp.Body.String(), `"code":"nflx"`)
+		testutil.AssertContains(t, updateResp.Body.String(), `"shortUrl":"https://ospk.org/nflx"`)
 	})
 
 	t.Run("fails if 'customCode' value already in use", func(t *testing.T) {

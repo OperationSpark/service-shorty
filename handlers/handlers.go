@@ -16,7 +16,7 @@ type (
 		SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
 		FindLink(ctx context.Context, code string) (shorty.Link, error)
 		FindAllLinks(ctx context.Context) (shorty.Links, error)
-		UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, error)
+		UpdateLink(ctx context.Context, code string, toUpdate shorty.Link) (shorty.Link, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 		CheckCodeInUse(ctx context.Context, code string) (bool, error)
 		IncrementTotalClicks(ctx context.Context, code string) (int, error)
@@ -199,8 +199,25 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := s.store.UpdateLink(r.Context(), link)
+	if len(link.CustomCode) > 0 {
+		isUsed, err := s.store.CheckCodeInUse(r.Context(), link.CustomCode)
+		if err != nil {
+			http.Error(w, "Could not check customCode", http.StatusInternalServerError)
+			panic(fmt.Errorf("checkCodeInUse: %v", err))
+		}
+		if isUsed {
+			http.Error(w, shorty.ErrCodeInUse.Error(), http.StatusConflict)
+			return
+		}
+		link.GenCode(s.baseURL)
+	}
+	code := parseLinkCode(r.URL.Path)
+	updated, err := s.store.UpdateLink(r.Context(), code, link)
 	if err != nil {
+		if err == shorty.ErrLinkNotFound {
+			http.Error(w, shorty.ErrLinkNotFound.Error(), http.StatusNotFound)
+			return
+		}
 		http.Error(w, "Could not update link", http.StatusInternalServerError)
 		panic(fmt.Errorf("updateLink: %v", err))
 	}
