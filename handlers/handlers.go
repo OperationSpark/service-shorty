@@ -16,6 +16,7 @@ type (
 		SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
 		FindLink(ctx context.Context, code string) (shorty.Link, error)
 		FindAllLinks(ctx context.Context) (shorty.Links, error)
+		UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, error)
 		DeleteLink(ctx context.Context, code string) (int, error)
 		CheckCodeInUse(ctx context.Context, code string) (bool, error)
 		IncrementTotalClicks(ctx context.Context, code string) (int, error)
@@ -59,10 +60,11 @@ func (s *ShortyService) BaseURL() string {
 
 func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+
 	case http.MethodPost:
 		s.createLink(w, r)
 		return
-		// TODO: READ
+
 	case http.MethodGet:
 		code := parseLinkCode(r.URL.Path)
 		if len(code) == 0 {
@@ -71,8 +73,10 @@ func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
 		}
 		s.getLink(w, r)
 		return
-		// TODO: UPDATE
+
 	case http.MethodPut:
+		s.updateLink(w, r)
+		return
 
 	case http.MethodDelete:
 		s.deleteLink(w, r)
@@ -109,7 +113,7 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 
 	linkInput := shorty.Link{}
 	if err := linkInput.FromJSON(r.Body); err != nil {
-		http.Error(w, "Unable to parse JSON", http.StatusBadRequest)
+		http.Error(w, shorty.ErrJSONUnmarshal.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -184,6 +188,28 @@ func (s *ShortyService) getLinks(w http.ResponseWriter, r *http.Request) {
 	if err = links.ToJSON(w); err != nil {
 		http.Error(w, "Problem marshaling your links", http.StatusInternalServerError)
 		panic(fmt.Errorf("getLinks: ToJSON: %v", err))
+	}
+}
+
+func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
+	var link shorty.Link
+	err := link.FromJSON(r.Body)
+	if err != nil {
+		http.Error(w, shorty.ErrJSONUnmarshal.Error(), http.StatusBadRequest)
+		return
+	}
+
+	updated, err := s.store.UpdateLink(r.Context(), link)
+	if err != nil {
+		http.Error(w, "Could not update link", http.StatusInternalServerError)
+		panic(fmt.Errorf("updateLink: %v", err))
+	}
+
+	w.WriteHeader(http.StatusOK)
+	err = updated.ToJSON(w)
+	if err != nil {
+		http.Error(w, "Problem marshaling link", http.StatusInternalServerError)
+		panic(fmt.Errorf("toJSON: %v", err))
 	}
 }
 

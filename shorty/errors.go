@@ -1,5 +1,9 @@
 package shorty
 
-import "fmt"
+import (
+	"errors"
+)
 
-var ErrLinkNotFound = fmt.Errorf("Link not found")
+var ErrLinkNotFound = errors.New("Link not found")
+var ErrJSONUnmarshal = errors.New("Cannot parse Link JSON")
+var ErrCodeInUse = errors.New("Code already in use")

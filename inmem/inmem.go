@@ -3,6 +3,7 @@ package inmem
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/operationspark/shorty/shorty"
 )
@@ -49,6 +50,28 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 		links = append(links, &l)
 	}
 	return links, nil
+}
+
+func (i *Store) UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, error) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	oldLink, err := i.FindLink(ctx, link.Code)
+	if err != nil {
+		return link, err
+	}
+
+	oldLink.UpdatedAt = time.Now()
+	if len(link.OriginalUrl) > 0 {
+		oldLink.OriginalUrl = link.OriginalUrl
+	}
+
+	oldLink.OriginalUrl = link.OriginalUrl
+	if len(link.CustomCode) > 0 {
+		oldLink.Code = link.CustomCode
+		oldLink.CustomCode = link.CustomCode
+	}
+	i.Store[link.Code] = oldLink
+	return oldLink, nil
 }
 
 func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/operationspark/shorty/shorty"
 	"go.mongodb.org/mongo-driver/bson"
@@ -107,6 +108,9 @@ func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, err
 	if err != nil {
 		return 0, fmt.Errorf("updateOne: %v", err)
 	}
+	if res.ModifiedCount == 0 {
+		return 0, shorty.ErrLinkNotFound
+	}
 	return int(res.ModifiedCount), nil
 }
 
@@ -140,6 +144,38 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	links := make(shorty.Links, cur.RemainingBatchLength())
 	cur.All(ctx, &links)
 	return links, nil
+}
+
+func (i *Store) UpdateLink(ctx context.Context, link shorty.Link) (shorty.Link, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
+
+	updateDoc := bson.D{
+		{"updatedAt", time.Now()},
+	}
+	if len(link.OriginalUrl) > 0 {
+		updateDoc = append(updateDoc, bson.E{"originalUrl", link.OriginalUrl})
+	}
+
+	if len(link.CustomCode) > 0 {
+		updateDoc = append(updateDoc,
+			bson.E{"shortUrl", link.ShortURL},
+			bson.E{"code", link.Code},
+			bson.E{"customCode", link.CustomCode},
+		)
+	}
+	res, err := coll.UpdateOne(
+		ctx,
+		bson.D{{"code", link.Code}},
+		bson.D{{"$set", updateDoc}},
+	)
+
+	if err != nil {
+		return link, fmt.Errorf("replaceOne: %v", err)
+	}
+	if res.ModifiedCount == 0 {
+		return link, shorty.ErrLinkNotFound
+	}
+	return link, nil
 }
 
 func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {

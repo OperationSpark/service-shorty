@@ -1,6 +1,7 @@
 package function
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -153,6 +154,62 @@ func TestDELETELinksIntegration(t *testing.T) {
 		// Delete count
 		testutil.AssertContains(t, response.Body.String(), "1")
 
+	})
+}
+
+func TestUPDATELinksIntegration(t *testing.T) {
+	t.Run("updates a link's original URL by code", func(t *testing.T) {
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+		seedData := shorty.Link{
+			Code:        "abcdef123",
+			OriginalUrl: "https://quii.gitbook.io/learn-go-with-tests/",
+		}
+
+		newURL := "https://changelog.com/gotime/253"
+
+		collection := store.Client.Database(store.DBName).Collection(store.LinksCollName)
+		_, err := collection.InsertOne(context.Background(), seedData)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var updateBody bytes.Buffer
+		seedData.OriginalUrl = newURL
+		seedData.ToJSON(&updateBody)
+
+		server := handlers.NewMux(store)
+		request, _ := http.NewRequest(http.MethodPut, "/api/urls/"+seedData.Code, &updateBody)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusOK)
+		testutil.AssertContains(t, response.Body.String(), fmt.Sprintf(`"originalUrl":%q`, newURL))
+
+		// Check database
+		res := collection.FindOne(
+			context.Background(),
+			bson.D{{"code", seedData.Code}},
+		)
+		if res.Err() != nil {
+			t.Fatal(err)
+		}
+		var updatedLink shorty.Link
+		res.Decode(&updatedLink)
+		testutil.AssertEqual(t, updatedLink.OriginalUrl, newURL)
+	})
+
+	t.Run("updates 'customCode' field", func(t *testing.T) {
+		t.Skip("TODO")
+		// TODO: Make sure customCode, code, and shortUrl fields all updated
+	})
+
+	t.Run("fails if 'customCode' value already in use", func(t *testing.T) {
+		t.Skip("TODO")
 	})
 }
 
