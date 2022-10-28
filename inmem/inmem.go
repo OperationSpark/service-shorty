@@ -22,20 +22,15 @@ type Store struct {
 	lock sync.RWMutex
 }
 
-func (i *Store) BaseURL() string {
-	return "https://ospk.org"
-}
-
-func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
+func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	newLink.GenCode(i.BaseURL())
 	i.Store[newLink.Code] = newLink
 	return newLink, nil
 }
 
-func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
+func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 
@@ -46,7 +41,7 @@ func (i *Store) GetLink(ctx context.Context, code string) (shorty.Link, error) {
 	return link, nil
 }
 
-func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {
+func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	links := shorty.Links{}
@@ -56,14 +51,39 @@ func (i *Store) GetLinks(ctx context.Context) (shorty.Links, error) {
 	return links, nil
 }
 
-func (i *Store) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-	panic("UpdateLink not implemented")
-}
-
 func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	panic("DeleteLink not implemented")
+	delete(i.Store, code)
+	return 1, nil
+}
+
+func (i *Store) CheckCodeInUse(ctx context.Context, code string) (bool, error) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+	_, err := i.FindLink(ctx, code)
+	if err != nil {
+		if err == shorty.ErrLinkNotFound {
+			return false, nil
+		}
+		// Default to true if there is an error
+		return true, err
+	}
+	// Code found
+	return true, nil
+}
+
+func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, error) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	link, err := i.FindLink(ctx, code)
+	if err != nil {
+		return 0, err
+	}
+	link.TotalClicks++
+	_, err = i.SaveLink(ctx, link)
+	if err != nil {
+		return 0, err
+	}
+	return link.TotalClicks, nil
 }
