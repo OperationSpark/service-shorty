@@ -34,6 +34,12 @@ func TestMain(m *testing.M) {
 	}
 
 	dbClient = client
+	err = dbClient.Database(dbName).Drop(context.Background())
+	if err != nil {
+		panic(fmt.Errorf("drop: %v", err))
+	}
+
+	// Run the tests
 	code := m.Run()
 
 	// disconnect mongodb client
