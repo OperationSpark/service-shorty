@@ -13,6 +13,8 @@ import (
 	"github.com/operationspark/shorty/mongodb"
 	"github.com/operationspark/shorty/shorty"
 	"github.com/operationspark/shorty/testutil"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // The MongoDB client for this tests are setup in
@@ -56,6 +58,41 @@ func TestPOSTLinkIntegration(t *testing.T) {
 		testutil.AssertStatus(t, response.Code, http.StatusBadRequest)
 	})
 
+	t.Run("uses 'customCode' if provided", func(t *testing.T) {
+		reqBody := strings.NewReader(`{"customCode": "abc", "originalUrl": "https://example.com" }`)
+		request, _ := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
+		response := httptest.NewRecorder()
+
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+		handlers.NewMux(store).ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusCreated)
+		testutil.AssertContains(t, response.Body.String(), "https://ospk.org/abc")
+	})
+
+	t.Run("responds with 409 if code is not available", func(t *testing.T) {
+		reqBody := `{"customCode": "123", "originalUrl": "https://example.com" }`
+		firstReq, _ := http.NewRequest(http.MethodPost, "/api/urls", strings.NewReader(reqBody))
+		secondReq, _ := http.NewRequest(http.MethodPost, "/api/urls", strings.NewReader(reqBody))
+		firstResp := httptest.NewRecorder()
+		secondResp := httptest.NewRecorder()
+
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+		handlers.NewMux(store).ServeHTTP(firstResp, firstReq)
+		handlers.NewMux(store).ServeHTTP(secondResp, secondReq)
+
+		testutil.AssertStatus(t, secondResp.Code, http.StatusConflict)
+		testutil.AssertContains(t, secondResp.Body.String(), `code: "123" already in use`)
+	})
+
 	t.Run("reuses code if no 'originalUrl' field matches an existing link", func(t *testing.T) {
 		t.Skip("TODO")
 	})
@@ -83,6 +120,38 @@ func TestGETLinksIntegration(t *testing.T) {
 
 		testutil.AssertStatus(t, response.Code, http.StatusOK)
 		testutil.AssertContains(t, response.Body.String(), wantContained)
+
+	})
+}
+
+func TestDELETELinksIntegration(t *testing.T) {
+	t.Run("deletes a link by code", func(t *testing.T) {
+		code := "abcdefg"
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+
+		seedData := shorty.Link{Code: code}
+		collection := store.Client.Database(store.DBName).Collection(store.LinksCollName)
+
+		collection.InsertOne(context.Background(), seedData)
+		res1 := collection.FindOne(context.Background(), bson.D{{"code", code}})
+		if res1.Err() != nil {
+			t.Fatal(res1.Err())
+		}
+
+		server := handlers.NewMux(store)
+		request, _ := http.NewRequest(http.MethodDelete, "/api/urls/"+code, nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		res2 := collection.FindOne(context.Background(), bson.D{{"code", code}})
+		testutil.AssertEqual(t, res2.Err(), mongo.ErrNoDocuments)
+		// Delete count
+		testutil.AssertContains(t, response.Body.String(), "1")
 
 	})
 }

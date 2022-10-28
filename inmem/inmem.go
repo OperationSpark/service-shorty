@@ -54,5 +54,19 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	panic("DeleteLink not implemented")
+	delete(i.Store, code)
+	return 1, nil
+}
+
+func (i *Store) CheckCodeInUse(ctx context.Context, code string) (bool, error) {
+	_, err := i.FindLink(ctx, code)
+	if err != nil {
+		if err == shorty.ErrLinkNotFound {
+			return false, nil
+		}
+		// Default to true if there is an error
+		return true, err
+	}
+	// Code found
+	return true, nil
 }

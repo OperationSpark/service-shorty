@@ -29,7 +29,10 @@ type (
 
 // NewStore creates an empty Shorty store.
 func NewStore(o StoreOpts) (*Store, error) {
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(o.URI))
+	client, err := mongo.Connect(
+		context.TODO(),
+		options.Client().ApplyURI(o.URI),
+	)
 	if err != nil {
 		return &Store{}, fmt.Errorf("connect: %v", err)
 	}
@@ -122,10 +125,25 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	return links, nil
 }
 
-func (i *Store) UpdateLink(ctx context.Context, code string) (shorty.Link, error) {
-	panic("UpdateLink not implemented")
+func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
+	res, err := coll.DeleteOne(ctx, bson.D{{"code", code}})
+	if err != nil {
+		return 0, fmt.Errorf("deleteOne: %v", err)
+	}
+	return int(res.DeletedCount), nil
 }
 
-func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
-	panic("DeleteLink not implemented")
+// CheckCodeInUse returns false if the code is available for use, or true if the code is already in use.
+func (i *Store) CheckCodeInUse(ctx context.Context, code string) (bool, error) {
+	_, err := i.FindLink(ctx, code)
+	if err != nil {
+		if err == shorty.ErrLinkNotFound {
+			return false, nil
+		}
+		// Default to true if there is an error
+		return true, err
+	}
+	// Code found
+	return true, nil
 }
