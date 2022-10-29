@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.Title}}</title>
+    <style>
+      .main {
+        position: fixed;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        inset: 0;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        flex-flow: row wrap;
+        background: rgba(25, 25, 25, 1);
+        color: rgba(255, 255, 255, 1);
+        font-family: "Trebuchet MS", "sans-serif";
+        padding: 1rem;
+        box-sizing: border-box;
+      }
+      .box {
+        display: flex;
+        padding: 1rem;
+        border-radius: 1rem;
+        justify-content: center;
+        align-items: center;
+        flex-flow: row wrap;
+        width: 500px;
+        max-width: calc(100vw - 3rem);
+        box-shadow: 0.5rem 0.5rem 1rem rgba(0, 0, 0, 0.5),
+          -0.5rem -0.5rem 1rem rgba(75, 75, 75, 0.25);
+      }
+
+      .error-message {
+        color: rgba(255, 100, 100, 1);
+      }
+      .code {
+        color: rgba(255, 80, 210, 1);
+        word-break: break-all;
+        letter-spacing: 0.25rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="main">
+      <div class="box">
+        <div>
+          <h1>Uh oh!</h1>
+          <h2 class="error-message">INVALID CODE</h2>
+          <h2 class="code">
+            <code>{{.Code}}</code>
+          </h2>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

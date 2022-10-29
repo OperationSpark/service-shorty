@@ -93,7 +93,7 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 	link, err := s.store.FindLink(r.Context(), code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
-			http.Error(w, fmt.Sprintf("Not Found. Code: %q", code), http.StatusNotFound)
+			s.renderNotFound(w, r)
 			return
 		}
 		http.Error(w, "Could not resolve link", http.StatusInternalServerError)
