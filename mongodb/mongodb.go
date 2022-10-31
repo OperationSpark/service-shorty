@@ -67,7 +67,6 @@ func NewStore(o StoreOpts) (*Store, error) {
 
 func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
-	// TODO: Maybe use upsert
 	_, err := coll.InsertOne(ctx, newLink)
 	if err != nil {
 		return shorty.Link{}, fmt.Errorf("insertOne: %v", err)

@@ -1,7 +1,8 @@
 # **URL Shortening Service (Go)**
+
 ![Coverage](https://img.shields.io/badge/Coverage-63.9%25-yellow)
 
-Create short URLs, resolve shortened URLs, and fetch all shortened URLs
+Create short URLs, resolve shortened URLs, and fetch all shortened URLs.
 
 - [Development](#development)
 - [Short URL API](#api)
@@ -17,55 +18,101 @@ Create short URLs, resolve shortened URLs, and fetch all shortened URLs
 Loosely based on Nic Jackson's [microservice tutorials](https://github.com/nicholasjackson/building-microservices-youtube/tree/episode_4)
 
 ### Packages:
+
 #### shorty
-- Business logic for `Link`s
-- Contains `Store` interface to be implemented in data access layer(s).
+
+- Definitions of the business data, `Link`, used in the application
+
 ```go
-ShortyStore interface {
-	CreateLink(ctx context.Context, newLink Link) (Link, error)
-	GetLink(ctx context.Context, code string) (Link, error)
-	GetLinks(ctx context.Context) (Links, error)
-	UpdateLink(ctx context.Context, code string) (Link, error)
-	DeleteLink(ctx context.Context, code string) (int, error)
+type Link struct {
+  // Shortened URL result. Ex: https://ospk.org/bas12d21dc.
+  ShortURL string `json:"shortUrl" bson:"shortUrl"`
+  // Short Code used as the path of the short URL. Ex: bas12d21dc.
+  Code string `json:"code" bson:"code"`
+  // Optional custom short code passed when creating or updating the short URL.
+  CustomCode string `json:"customCode" bson:"customCode"`
+  // The URL where the short URL redirects.
+  OriginalUrl string `json:"originalUrl" bson:"originalUrl"`
+  // Count of times the short URL has been used.
+  TotalClicks int `json:"totalClicks" bson:"totalClicks"`
+  // Identifier of the entity that created the short URL.
+  CreatedBy string `json:"createdBy" bson:"createdBy"`
+  // DateTime the URL was created.
+  CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+  // DateTime the URL was last updated.
+  UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 ```
 
 #### handlers
+
 - HTTP route handlers that call the CRUD methods on the given `store` implementation.
+
 ```go
 func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
-        // Parse JSON body into a link
-        linkInput.FromJSON(r.Body)
-       
-        // Error handling omitted for brevity... 
+  // Parse JSON body into a link
+  linkInput.FromJSON(r.Body)
+
+  // Error handling omitted for brevity...
 
 	// Create and save the short link to the DB
-	newLink, err := s.store.CreateLink(r.Context(), linkInput)
-	
+	newLink, err := s.store.SaveLink(r.Context(), linkInput)
+
 	// Send new link JSON
 	if err = newLink.ToJSON(w); err != nil {
 		http.Error(w, "Problem marshaling your short link", http.StatusInternalServerError)
 	}
 }
+```
 
+- Contains `LinkStore` interface to be implemented in data access layer(s).
+
+```go
+type LinkStore interface {
+  SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error)
+  FindLink(ctx context.Context, code string) (shorty.Link, error)
+  FindAllLinks(ctx context.Context) (shorty.Links, error)
+  UpdateLink(ctx context.Context, code string, toUpdate shorty.Link) (shorty.Link, error)
+  DeleteLink(ctx context.Context, code string) (int, error)
+  CheckCodeInUse(ctx context.Context, code string) (bool, error)
+  IncrementTotalClicks(ctx context.Context, code string) (int, error)
+}
 ```
 
 #### mongodb
-- Data access layer,  implemented for MongoDB
+
+- Data access layer, implemented for MongoDB
+
+```go
+func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
+	_, err := coll.InsertOne(ctx, newLink)
+	if err != nil {
+		return shorty.Link{}, fmt.Errorf("insertOne: %v", err)
+	}
+	return newLink, nil
+}
+```
 
 #### inmem
+
 - Data access layer implemented for an in-memory store for simpler API testing
+
 ```go
-func (i *Store) CreateLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
-	newLink.GenCode(i.BaseURL())
-	i.store[newLink.Code] = newLink
+func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	i.Store[newLink.Code] = newLink
 	return newLink, nil
 }
 ```
 
 #### function
-- Entrypoint in to the Cloud function 
+
+- Entrypoint in to the Cloud function
 - All packages tied together here:
+
 ```go
 func init() {
 	functions.HTTP("ServeShorty", NewMux().ServeHTTP)
@@ -74,23 +121,40 @@ func init() {
 var store shorty.ShortyStore
 
 func NewMux() *http.ServeMux {
-	store, err := initStore()
+  mongoURI := os.Getenv("MONGO_URI")
+	store, err := mongodb.NewStore(mongodb.StoreOpts{URI: mongoURI})
 	if err != nil {
 		panic(err)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/urls", handlers.NewService(store).ServeHTTP)
-	mux.HandleFunc("/", handlers.Resolver)
+	baseURL := os.Getenv("HOST_BASE_URL")
+	apiKey := os.Getenv("API_KEY")
 
-	return mux
+	service := handlers.NewAPIService(store, baseURL, apiKey)
+	return handlers.NewServer(service)
 }
 ```
 
+### **Tests**
 
-#### **Test**
+If you already have a local MongoDB server running, you can use it for the tests.
 
-- `go test`
+```shell
+$ go test
+```
+
+The tests can alternatively use docker to build and start a MongoDB service for you. Note: This will take a bit longer (30-60s).
+
+```shell
+$ go test --tags=integration
+```
+
+You can view your test coverage in a browser:
+
+```shell
+$ go-acc --covermode=count -o=coverage.out $(go list ./...)
+$ go tool cover -html=coverage.out
+```
 
 ---
 
