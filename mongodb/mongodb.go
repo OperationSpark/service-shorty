@@ -65,6 +65,7 @@ func NewStore(o StoreOpts) (*Store, error) {
 	return &s, nil
 }
 
+// SaveLink inserts a new Link into the database.
 func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	_, err := coll.InsertOne(ctx, newLink)
@@ -74,6 +75,7 @@ func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link,
 	return newLink, nil
 }
 
+// IncrementTotalClicks increments the "totalClicks" field and updates the database.
 func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	res, err := coll.UpdateOne(
@@ -91,6 +93,7 @@ func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, err
 	return int(res.ModifiedCount), nil
 }
 
+// FindLink finds the Link with the given code.
 func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) {
 	var link shorty.Link
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
@@ -110,6 +113,7 @@ func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) 
 	return link, nil
 }
 
+// FindAllLinks returns all the links from the database.
 func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	cur, err := coll.Find(ctx, bson.D{{}})
@@ -123,6 +127,7 @@ func (i *Store) FindAllLinks(ctx context.Context) (shorty.Links, error) {
 	return links, nil
 }
 
+// UpdateLink updates a links originalUrl if given. If a code is given, shortCode, code, and customCode are updated. The updatedAt is set to the current time.
 func (i *Store) UpdateLink(ctx context.Context, code string, link shorty.Link) (shorty.Link, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 
@@ -155,6 +160,7 @@ func (i *Store) UpdateLink(ctx context.Context, code string, link shorty.Link) (
 	return link, nil
 }
 
+// DeleteLink deletes a link from the database.
 func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	res, err := coll.DeleteOne(ctx, bson.D{{"code", code}})

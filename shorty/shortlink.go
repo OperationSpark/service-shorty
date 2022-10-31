@@ -30,6 +30,7 @@ type (
 	Links []*Link
 )
 
+// FromJSON unmarshals a request's JSON body into a Link.
 func (sl *Link) FromJSON(r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(sl); err != nil {
 		return fmt.Errorf("decode: %v", err)
@@ -37,6 +38,7 @@ func (sl *Link) FromJSON(r io.Reader) error {
 	return nil
 }
 
+// ToJSON marshals a Link into JSON and writes the result to a Writer.
 func (sl *Link) ToJSON(w io.Writer) error {
 	if err := json.NewEncoder(w).Encode(sl); err != nil {
 		return fmt.Errorf("encode: %v", err)
@@ -61,6 +63,7 @@ func (sl *Link) GenCode(baseURL string) {
 	sl.ShortURL = fmt.Sprintf("%s/%s", baseURL, code)
 }
 
+// ToJSON marshals a list of Links into JSON and writes the result to a Writer.
 func (l *Links) ToJSON(w io.Writer) error {
 	if err := json.NewEncoder(w).Encode(l); err != nil {
 		return fmt.Errorf("encode: %v", err)
