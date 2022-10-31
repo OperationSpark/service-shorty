@@ -45,7 +45,7 @@ func NewAPIService(store LinkStore, baseURL, APIkey string) *ShortyService {
 
 	return &ShortyService{
 		store:       store,
-		baseURL:     _baseURL,
+		baseURL:     strings.TrimSuffix(_baseURL, "/"),
 		serviceName: "system",
 		apiKey:      _apiKey,
 	}
