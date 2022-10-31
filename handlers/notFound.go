@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-//go:embed templates/not-found.html
+//go:embed html
 var content embed.FS
 
 type templateData struct {
@@ -17,7 +17,8 @@ type templateData struct {
 
 func (s *ShortyService) renderNotFound(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	t, err := template.ParseFS(content, "templates/not-found.html")
+	w.WriteHeader(http.StatusNotFound)
+	t, err := template.ParseFS(content, "html/not-found.html")
 	if err != nil {
 		panic(fmt.Errorf("unable to load template: %v", err))
 	}

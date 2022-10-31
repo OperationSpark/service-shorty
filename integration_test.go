@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/operationspark/shorty/handlers"
+	"github.com/operationspark/shorty/inmem"
 	"github.com/operationspark/shorty/mongodb"
 	"github.com/operationspark/shorty/shorty"
 	"github.com/operationspark/shorty/testutil"
@@ -360,8 +361,24 @@ func TestNotFoundPage(t *testing.T) {
 		html := response.Body.String()
 		testutil.AssertContains(t, html, "<h2 class=\"error-message\">INVALID CODE</h2>")
 		testutil.AssertContains(t, html, "<code>9234234</code>")
+		testutil.AssertStatus(t, response.Code, http.StatusNotFound)
 	})
 }
+
+func TestFavicon(t *testing.T) {
+	t.Run("serves favicon.ico", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/favicon.ico", nil)
+		response := httptest.NewRecorder()
+
+		service := handlers.NewAPIService(&inmem.Store{}, "", "")
+		server := handlers.NewServer(service)
+
+		server.ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusOK)
+	})
+}
+
 func NewRequestWithAPIKey(method, path string, body io.Reader) *http.Request {
 	r, _ := http.NewRequest(method, path, body)
 	r.Header.Add("key", "test-api-key")

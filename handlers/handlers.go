@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
 	"strings"
@@ -51,10 +52,17 @@ func NewAPIService(store LinkStore, baseURL, APIkey string) *ShortyService {
 }
 
 func NewServer(apiService *ShortyService) *http.ServeMux {
+	html, err := fs.Sub(content, "html")
+	if err != nil {
+		panic(err)
+	}
+
 	mux := http.NewServeMux()
 	// Find better way to ignore trailing "/"
 	mux.HandleFunc("/api/urls", apiService.verifyAuth(apiService.ServeAPI))
 	mux.HandleFunc("/api/urls/", apiService.verifyAuth(apiService.ServeAPI))
+
+	mux.Handle("/favicon.ico", http.FileServer(http.FS(html)))
 	mux.HandleFunc("/", apiService.ServeResolver)
 
 	return mux
