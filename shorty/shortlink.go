@@ -1,7 +1,6 @@
 package shorty
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,16 +28,9 @@ type (
 	}
 
 	Links []*Link
-
-	ShortyStore interface {
-		CreateLink(ctx context.Context, newLink Link) (Link, error)
-		GetLink(ctx context.Context, code string) (Link, error)
-		GetLinks(ctx context.Context) (Links, error)
-		UpdateLink(ctx context.Context, code string) (Link, error)
-		DeleteLink(ctx context.Context, code string) (int, error)
-	}
 )
 
+// FromJSON unmarshals a request's JSON body into a Link.
 func (sl *Link) FromJSON(r io.Reader) error {
 	if err := json.NewDecoder(r).Decode(sl); err != nil {
 		return fmt.Errorf("decode: %v", err)
@@ -46,6 +38,7 @@ func (sl *Link) FromJSON(r io.Reader) error {
 	return nil
 }
 
+// ToJSON marshals a Link into JSON and writes the result to a Writer.
 func (sl *Link) ToJSON(w io.Writer) error {
 	if err := json.NewEncoder(w).Encode(sl); err != nil {
 		return fmt.Errorf("encode: %v", err)
@@ -53,14 +46,24 @@ func (sl *Link) ToJSON(w io.Writer) error {
 	return nil
 }
 
+// GenCode generates and sets the Code, CustomCode, and ShortURL fields on the Link.
+// If the Link already has a CustomCode, Code and ShortURL will be set to that value.
 func (sl *Link) GenCode(baseURL string) {
-	code := CreateCode()
+	// Check if "customCode" set and use it if so.
+	if len(sl.CustomCode) > 0 {
+		sl.Code = sl.CustomCode
+		sl.ShortURL = fmt.Sprintf("%s/%s", baseURL, sl.CustomCode)
+		return
+	}
 
+	// Generate random code if customCode not set
+	code := CreateCode()
 	sl.Code = code
 	sl.CustomCode = code
 	sl.ShortURL = fmt.Sprintf("%s/%s", baseURL, code)
 }
 
+// ToJSON marshals a list of Links into JSON and writes the result to a Writer.
 func (l *Links) ToJSON(w io.Writer) error {
 	if err := json.NewEncoder(w).Encode(l); err != nil {
 		return fmt.Errorf("encode: %v", err)
