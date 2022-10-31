@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -22,17 +23,58 @@ import (
 // "integration-local-mongo_test.go" if the build tags do not include "integration",
 // or "integration-dockertest_test.go", if the build tags include "integration".
 
+func TestAuthorization(t *testing.T) {
+	t.Run("responds with 403 if 'key' header is missing", func(t *testing.T) {
+		store := &mongodb.Store{Client: dbClient, DBName: dbName, LinksCollName: urlCollName}
+
+		request, _ := http.NewRequest(http.MethodGet, "/api/urls", nil)
+		response := httptest.NewRecorder()
+
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusUnauthorized)
+	})
+
+	t.Run("responds with 403 if 'key' header is incorrect", func(t *testing.T) {
+		store := &mongodb.Store{Client: dbClient, DBName: dbName, LinksCollName: urlCollName}
+
+		request, _ := http.NewRequest(http.MethodGet, "/api/urls", nil)
+		request.Header.Add("key", "not-the-key")
+		response := httptest.NewRecorder()
+
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusUnauthorized)
+	})
+
+	t.Run("responds with 200 if 'key' header is valid", func(t *testing.T) {
+		store := &mongodb.Store{Client: dbClient, DBName: dbName, LinksCollName: urlCollName}
+
+		request, _ := http.NewRequest(http.MethodGet, "/api/urls", nil)
+		request.Header.Add("key", "test-api-key")
+		response := httptest.NewRecorder()
+
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusOK)
+	})
+}
+
 func TestPOSTLinkIntegration(t *testing.T) {
 	t.Run("returns the Shorty by code", func(t *testing.T) {
 		ogURL := "https://operationspark.org"
 		reqBody := strings.NewReader(fmt.Sprintf(`{"originalUrl":%q}`, ogURL))
 
-		request, _ := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
+		request := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", reqBody)
 		response := httptest.NewRecorder()
 
 		store := &mongodb.Store{Client: dbClient, DBName: dbName, LinksCollName: urlCollName}
 
-		handlers.NewMux(store).ServeHTTP(response, request)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
 
 		var got shorty.Link
 		d := json.NewDecoder(response.Body)
@@ -46,7 +88,7 @@ func TestPOSTLinkIntegration(t *testing.T) {
 
 	t.Run("errors if no 'originalUrl' field in body", func(t *testing.T) {
 		reqBody := strings.NewReader(`{}`)
-		request, _ := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
+		request := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", reqBody)
 		response := httptest.NewRecorder()
 
 		store := &mongodb.Store{
@@ -54,14 +96,15 @@ func TestPOSTLinkIntegration(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		handlers.NewMux(store).ServeHTTP(response, request)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusBadRequest)
 	})
 
 	t.Run("uses 'customCode' if provided", func(t *testing.T) {
 		reqBody := strings.NewReader(`{"customCode": "abc", "originalUrl": "https://example.com" }`)
-		request, _ := http.NewRequest(http.MethodPost, "/api/urls", reqBody)
+		request := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", reqBody)
 		response := httptest.NewRecorder()
 
 		store := &mongodb.Store{
@@ -69,7 +112,8 @@ func TestPOSTLinkIntegration(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		handlers.NewMux(store).ServeHTTP(response, request)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusCreated)
 		testutil.AssertContains(t, response.Body.String(), "https://ospk.org/abc")
@@ -77,8 +121,8 @@ func TestPOSTLinkIntegration(t *testing.T) {
 
 	t.Run("responds with 409 if code is not available", func(t *testing.T) {
 		reqBody := `{"customCode": "123", "originalUrl": "https://example.com" }`
-		firstReq, _ := http.NewRequest(http.MethodPost, "/api/urls", strings.NewReader(reqBody))
-		secondReq, _ := http.NewRequest(http.MethodPost, "/api/urls", strings.NewReader(reqBody))
+		firstReq := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", strings.NewReader(reqBody))
+		secondReq := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", strings.NewReader(reqBody))
 		firstResp := httptest.NewRecorder()
 		secondResp := httptest.NewRecorder()
 
@@ -87,8 +131,9 @@ func TestPOSTLinkIntegration(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		handlers.NewMux(store).ServeHTTP(firstResp, firstReq)
-		handlers.NewMux(store).ServeHTTP(secondResp, secondReq)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(firstResp, firstReq)
+		handlers.NewServer(service).ServeHTTP(secondResp, secondReq)
 
 		testutil.AssertStatus(t, secondResp.Code, http.StatusConflict)
 		testutil.AssertContains(t, secondResp.Body.String(), `code: "123" already in use`)
@@ -110,11 +155,12 @@ func TestGETLinksIntegration(t *testing.T) {
 		seedData := shorty.Link{Code: "abc1234"}
 		store.Client.Database(store.DBName).Collection(store.LinksCollName).InsertOne(context.Background(), seedData)
 
-		server := handlers.NewMux(store)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
 
 		wantContained := `"code":"abc1234"`
 
-		request, _ := http.NewRequest(http.MethodGet, "/api/urls/", nil)
+		request := NewRequestWithAPIKey(http.MethodGet, "/api/urls/", nil)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -143,8 +189,9 @@ func TestDELETELinksIntegration(t *testing.T) {
 			t.Fatal(res1.Err())
 		}
 
-		server := handlers.NewMux(store)
-		request, _ := http.NewRequest(http.MethodDelete, "/api/urls/"+code, nil)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
+		request := NewRequestWithAPIKey(http.MethodDelete, "/api/urls/"+code, nil)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -181,8 +228,9 @@ func TestUPDATELinksIntegration(t *testing.T) {
 		seedData.OriginalUrl = newURL
 		seedData.ToJSON(&updateBody)
 
-		server := handlers.NewMux(store)
-		request, _ := http.NewRequest(http.MethodPut, "/api/urls/"+seedData.Code, &updateBody)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
+		request := NewRequestWithAPIKey(http.MethodPut, "/api/urls/"+seedData.Code, &updateBody)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -210,8 +258,9 @@ func TestUPDATELinksIntegration(t *testing.T) {
 			LinksCollName: urlCollName,
 		}
 
-		server := handlers.NewMux(store)
-		request, _ := http.NewRequest(http.MethodPut, "/api/urls/notacode", strings.NewReader(`{}`))
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
+		request := NewRequestWithAPIKey(http.MethodPut, "/api/urls/notacode", strings.NewReader(`{}`))
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -227,8 +276,9 @@ func TestUPDATELinksIntegration(t *testing.T) {
 			LinksCollName: urlCollName,
 		}
 
-		server := handlers.NewMux(store)
-		createReq, _ := http.NewRequest(http.MethodPost, "/api/urls", strings.NewReader(`{"originalUrl":"https://netflix.com"}`))
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
+		createReq := NewRequestWithAPIKey(http.MethodPost, "/api/urls", strings.NewReader(`{"originalUrl":"https://netflix.com"}`))
 		createResp := httptest.NewRecorder()
 
 		server.ServeHTTP(createResp, createReq)
@@ -236,7 +286,7 @@ func TestUPDATELinksIntegration(t *testing.T) {
 
 		var toUpdate shorty.Link
 		toUpdate.FromJSON(createResp.Body)
-		updateReq, _ := http.NewRequest(http.MethodPut, "/api/urls/"+toUpdate.Code, strings.NewReader(`{"customCode":"nflx"}`))
+		updateReq := NewRequestWithAPIKey(http.MethodPut, "/api/urls/"+toUpdate.Code, strings.NewReader(`{"customCode":"nflx"}`))
 		updateResp := httptest.NewRecorder()
 
 		server.ServeHTTP(updateResp, updateReq)
@@ -261,11 +311,12 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 			LinksCollName: urlCollName,
 		}
 
-		server := handlers.NewMux(store)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
 
 		originalURL := "https://greenlight.operationspark.org/dashboard?subview=overview"
 		createLinkBody := strings.NewReader(fmt.Sprintf(`{"originalUrl": %q }`, originalURL))
-		createLinkReq, _ := http.NewRequest(http.MethodPost, "/api/urls/", createLinkBody)
+		createLinkReq := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", createLinkBody)
 		createLinkResp := httptest.NewRecorder()
 
 		// POST to create a new short link
@@ -275,7 +326,7 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 		json.NewDecoder(createLinkResp.Body).Decode(&newLink)
 
 		// Use new short link
-		useLinkReq, _ := http.NewRequest(http.MethodGet, "/"+newLink.Code, nil)
+		useLinkReq := NewRequestWithAPIKey(http.MethodGet, "/"+newLink.Code, nil)
 		redirectResp := httptest.NewRecorder()
 
 		server.ServeHTTP(redirectResp, useLinkReq)
@@ -284,9 +335,15 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 		testutil.AssertContains(t, redirectResp.Body.String(), originalURL)
 
 		// Check click count increment
-		getLinkReq, _ := http.NewRequest(http.MethodGet, "/api/urls/"+newLink.Code, nil)
+		getLinkReq := NewRequestWithAPIKey(http.MethodGet, "/api/urls/"+newLink.Code, nil)
 		getLinkResp := httptest.NewRecorder()
 		server.ServeHTTP(getLinkResp, getLinkReq)
 		testutil.AssertContains(t, getLinkResp.Body.String(), `"totalClicks":1`)
 	})
+}
+
+func NewRequestWithAPIKey(method, path string, body io.Reader) *http.Request {
+	r, _ := http.NewRequest(method, path, body)
+	r.Header.Add("key", "test-api-key")
+	return r
 }

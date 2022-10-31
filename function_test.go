@@ -19,12 +19,13 @@ func TestPOSTLink(t *testing.T) {
 		ogURL := "https://operationspark.org"
 		reqBody := bytes.NewReader([]byte(fmt.Sprintf(`{"originalUrl":%q}`, ogURL)))
 
-		request, _ := http.NewRequest(http.MethodPost, "/api/urls/", reqBody)
+		request := NewRequestWithAPIKey(http.MethodPost, "/api/urls/", reqBody)
 		response := httptest.NewRecorder()
 
 		store := inmem.NewStore()
 
-		handlers.NewMux(store).ServeHTTP(response, request)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		handlers.NewServer(service).ServeHTTP(response, request)
 		var got shorty.Link
 		d := json.NewDecoder(response.Body)
 		d.Decode(&got)
@@ -43,7 +44,8 @@ func TestGETLink(t *testing.T) {
 		"abc123": {Code: "abc123"},
 	}
 
-	server := handlers.NewMux(store)
+	service := handlers.NewAPIService(store, "", "test-api-key")
+	server := handlers.NewServer(service)
 
 	tests := []struct {
 		name       string
@@ -67,7 +69,7 @@ func TestGETLink(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/urls%s", test.endpoint), nil)
+			request := NewRequestWithAPIKey(http.MethodGet, fmt.Sprintf("/api/urls%s", test.endpoint), nil)
 			response := httptest.NewRecorder()
 
 			server.ServeHTTP(response, request)
@@ -85,11 +87,12 @@ func TestGETLinks(t *testing.T) {
 			"abc123": {Code: "abc123"},
 		}
 
-		server := handlers.NewMux(store)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
 
 		wantBody := `[{"shortUrl":"","code":"abc123","customCode":"","originalUrl":"","totalClicks":0,"createdBy":"","createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]` + "\n"
 
-		request, _ := http.NewRequest(http.MethodGet, "/api/urls/", nil)
+		request := NewRequestWithAPIKey(http.MethodGet, "/api/urls/", nil)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -100,11 +103,12 @@ func TestGETLinks(t *testing.T) {
 
 	t.Run("returns empty list if there a no links in the store", func(t *testing.T) {
 		store := inmem.NewStore()
-		server := handlers.NewMux(store)
+		service := handlers.NewAPIService(store, "", "test-api-key")
+		server := handlers.NewServer(service)
 
 		wantBody := "[]\n"
 
-		request, _ := http.NewRequest(http.MethodGet, "/api/urls/", nil)
+		request := NewRequestWithAPIKey(http.MethodGet, "/api/urls/", nil)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)

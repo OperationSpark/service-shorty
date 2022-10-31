@@ -27,35 +27,50 @@ type (
 		// Base service URL. Defaults to https://ospk.org
 		baseURL     string
 		serviceName string
+		apiKey      string
 	}
 )
 
-func NewAPIService(store LinkStore, baseURL string) *ShortyService {
+func NewAPIService(store LinkStore, baseURL, APIkey string) *ShortyService {
 	_baseURL := "https://ospk.org"
 	if len(baseURL) > 0 {
 		_baseURL = baseURL
+	}
+
+	_apiKey := os.Getenv("API_KEY")
+	if len(APIkey) > 0 {
+		_apiKey = APIkey
 	}
 
 	return &ShortyService{
 		store:       store,
 		baseURL:     _baseURL,
 		serviceName: "system",
+		apiKey:      _apiKey,
 	}
 }
 
-func NewMux(store LinkStore) *http.ServeMux {
-	baseURL := os.Getenv("HOST_BASE_URL")
-	service := NewAPIService(store, baseURL)
+func NewServer(apiService *ShortyService) *http.ServeMux {
 	mux := http.NewServeMux()
 	// Find better way to ignore trailing "/"
-	mux.HandleFunc("/api/urls", service.ServeAPI)
-	mux.HandleFunc("/api/urls/", service.ServeAPI)
-	mux.HandleFunc("/", service.ServeResolver)
+	mux.HandleFunc("/api/urls", apiService.verifyAuth(apiService.ServeAPI))
+	mux.HandleFunc("/api/urls/", apiService.verifyAuth(apiService.ServeAPI))
+	mux.HandleFunc("/", apiService.ServeResolver)
 
 	return mux
 }
 func (s *ShortyService) BaseURL() string {
 	return s.baseURL
+}
+
+func (s *ShortyService) verifyAuth(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("key") == s.apiKey {
+			h.ServeHTTP(w, r)
+			return
+		}
+		http.Error(w, "Invalid API key", http.StatusUnauthorized)
+	}
 }
 
 func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {

@@ -25,7 +25,11 @@ func NewMux() *http.ServeMux {
 		panic(err)
 	}
 
-	return handlers.NewMux(store)
+	baseURL := os.Getenv("HOST_BASE_URL")
+	apiKey := os.Getenv("API_KEY")
+
+	service := handlers.NewAPIService(store, baseURL, apiKey)
+	return handlers.NewServer(service)
 }
 
 // InitStore initializes the ShortyStore to either a MongoDB or an in-memory implementation.
