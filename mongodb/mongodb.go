@@ -65,28 +65,6 @@ func NewStore(o StoreOpts) (*Store, error) {
 	return &s, nil
 }
 
-// CreateCodeIndex creates an index on the 'code' field in the urls collection
-func (i *Store) CreateCodeIndex(ctx context.Context) error {
-	collection := i.Client.Database(i.DBName).Collection(i.LinksCollName)
-	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{"code", 1}},
-		Options: options.Index().SetUnique(true),
-	}
-
-	// Remove existing index to update
-	_, err := collection.Indexes().DropOne(ctx, "code_1")
-	if err != nil {
-		return fmt.Errorf("dropOne: %v", err)
-	}
-	_, err = collection.
-		Indexes().
-		CreateOne(ctx, indexModel)
-	if err != nil {
-		return fmt.Errorf("createOne: %v", err)
-	}
-	return nil
-}
-
 func (i *Store) SaveLink(ctx context.Context, newLink shorty.Link) (shorty.Link, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	// TODO: Maybe use upsert
