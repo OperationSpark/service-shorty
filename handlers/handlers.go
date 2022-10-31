@@ -82,6 +82,8 @@ func (s *ShortyService) verifyAuth(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	switch r.Method {
 
 	case http.MethodPost:
@@ -132,8 +134,6 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	linkInput := shorty.Link{}
 	if err := linkInput.FromJSON(r.Body); err != nil {
 		http.Error(w, shorty.ErrJSONUnmarshal.Error(), http.StatusBadRequest)

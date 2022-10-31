@@ -168,7 +168,7 @@ func TestGETLinksIntegration(t *testing.T) {
 
 		testutil.AssertStatus(t, response.Code, http.StatusOK)
 		testutil.AssertContains(t, response.Body.String(), wantContained)
-
+		testutil.AssertContains(t, response.Header().Get("Content-Type"), "application/json")
 	})
 }
 
