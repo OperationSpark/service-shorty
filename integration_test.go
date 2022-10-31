@@ -342,6 +342,26 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 	})
 }
 
+func TestNotFoundPage(t *testing.T) {
+	t.Run("renders not-found page when the no link exists for a given code", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodGet, "/9234234", nil)
+		response := httptest.NewRecorder()
+
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+		service := handlers.NewAPIService(store, "", "")
+		server := handlers.NewServer(service)
+
+		server.ServeHTTP(response, request)
+
+		html := response.Body.String()
+		testutil.AssertContains(t, html, "<h2 class=\"error-message\">INVALID CODE</h2>")
+		testutil.AssertContains(t, html, "<code>9234234</code>")
+	})
+}
 func NewRequestWithAPIKey(method, path string, body io.Reader) *http.Request {
 	r, _ := http.NewRequest(method, path, body)
 	r.Header.Add("key", "test-api-key")
