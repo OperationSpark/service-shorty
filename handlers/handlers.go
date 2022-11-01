@@ -128,7 +128,7 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 	_, err = s.store.IncrementTotalClicks(r.Context(), code)
 	if err != nil {
 		// Redirect even if there is an error. Client should not suffer if the clicks can't be updated.
-		fmt.Fprintf(os.Stderr, "could not update TotalClick count")
+		fmt.Fprintf(os.Stderr, "could not update TotalClick count: %v", err)
 	}
 	http.Redirect(w, r, link.OriginalUrl, http.StatusPermanentRedirect)
 }

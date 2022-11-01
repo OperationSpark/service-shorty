@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/operationspark/shorty/handlers"
 	"github.com/operationspark/shorty/inmem"
@@ -339,7 +340,16 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 		getLinkReq := NewRequestWithAPIKey(http.MethodGet, "/api/urls/"+newLink.Code, nil)
 		getLinkResp := httptest.NewRecorder()
 		server.ServeHTTP(getLinkResp, getLinkReq)
+
 		testutil.AssertContains(t, getLinkResp.Body.String(), `"totalClicks":1`)
+		// UpdatedAt rounded to nearest second
+		wantUpdatedAtISO := strings.TrimSuffix(time.Now().UTC().Format(time.RFC3339), "Z")
+		testutil.AssertContains(
+			t,
+			getLinkResp.Body.String(),
+			fmt.Sprintf(`"updatedAt":"%s`, wantUpdatedAtISO),
+		)
+		testutil.AssertStatus(t, getLinkResp.Code, http.StatusOK)
 	})
 }
 
