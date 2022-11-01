@@ -82,7 +82,9 @@ func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, err
 		ctx,
 		bson.D{{"code", code}},
 		bson.D{
-			{"$inc", bson.D{{"totalClicks", 1}}}},
+			{"$inc", bson.D{{"totalClicks", 1}}},
+			{"$set", bson.D{{"updatedAt", time.Now()}}},
+		},
 	)
 	if err != nil {
 		return 0, fmt.Errorf("updateOne: %v", err)
