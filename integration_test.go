@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/operationspark/shorty/handlers"
-	"github.com/operationspark/shorty/inmem"
 	"github.com/operationspark/shorty/mongodb"
 	"github.com/operationspark/shorty/shorty"
 	"github.com/operationspark/shorty/testutil"
@@ -32,7 +31,10 @@ func TestAuthorization(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, "/api/urls", nil)
 		response := httptest.NewRecorder()
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusUnauthorized)
@@ -45,7 +47,10 @@ func TestAuthorization(t *testing.T) {
 		request.Header.Add("key", "not-the-key")
 		response := httptest.NewRecorder()
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusUnauthorized)
@@ -58,7 +63,10 @@ func TestAuthorization(t *testing.T) {
 		request.Header.Add("key", "test-api-key")
 		response := httptest.NewRecorder()
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusOK)
@@ -75,7 +83,10 @@ func TestPOSTLinkIntegration(t *testing.T) {
 
 		store := &mongodb.Store{Client: dbClient, DBName: dbName, LinksCollName: urlCollName}
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 
 		var got shorty.Link
@@ -98,7 +109,10 @@ func TestPOSTLinkIntegration(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusBadRequest)
@@ -114,7 +128,10 @@ func TestPOSTLinkIntegration(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusCreated)
@@ -133,7 +150,10 @@ func TestPOSTLinkIntegration(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(firstResp, firstReq)
 		handlers.NewServer(service).ServeHTTP(secondResp, secondReq)
 
@@ -157,7 +177,10 @@ func TestGETLinksIntegration(t *testing.T) {
 		seedData := shorty.Link{Code: "abc1234"}
 		store.Client.Database(store.DBName).Collection(store.LinksCollName).InsertOne(context.Background(), seedData)
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 
 		wantContained := `"code":"abc1234"`
@@ -191,7 +214,10 @@ func TestDELETELinksIntegration(t *testing.T) {
 			t.Fatal(res1.Err())
 		}
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 		request := NewRequestWithAPIKey(http.MethodDelete, "/api/urls/"+code, nil)
 		response := httptest.NewRecorder()
@@ -230,7 +256,10 @@ func TestUPDATELinksIntegration(t *testing.T) {
 		seedData.OriginalUrl = newURL
 		seedData.ToJSON(&updateBody)
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 		request := NewRequestWithAPIKey(http.MethodPut, "/api/urls/"+seedData.Code, &updateBody)
 		response := httptest.NewRecorder()
@@ -260,7 +289,10 @@ func TestUPDATELinksIntegration(t *testing.T) {
 			LinksCollName: urlCollName,
 		}
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 		request := NewRequestWithAPIKey(http.MethodPut, "/api/urls/notacode", strings.NewReader(`{}`))
 		response := httptest.NewRecorder()
@@ -278,7 +310,10 @@ func TestUPDATELinksIntegration(t *testing.T) {
 			LinksCollName: urlCollName,
 		}
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 		createReq := NewRequestWithAPIKey(http.MethodPost, "/api/urls", strings.NewReader(`{"originalUrl":"https://netflix.com"}`))
 		createResp := httptest.NewRecorder()
@@ -313,7 +348,10 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 			LinksCollName: urlCollName,
 		}
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 
 		originalURL := "https://greenlight.operationspark.org/dashboard?subview=overview"
@@ -363,7 +401,9 @@ func TestNotFoundPage(t *testing.T) {
 			DBName:        dbName,
 			LinksCollName: urlCollName,
 		}
-		service := handlers.NewAPIService(store, "", "")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store: store,
+		})
 		server := handlers.NewServer(service)
 
 		server.ServeHTTP(response, request)
@@ -380,7 +420,7 @@ func TestFavicon(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodGet, "/favicon.ico", nil)
 		response := httptest.NewRecorder()
 
-		service := handlers.NewAPIService(&inmem.Store{}, "", "")
+		service := handlers.NewAPIService(handlers.ServiceConfig{})
 		server := handlers.NewServer(service)
 
 		server.ServeHTTP(response, request)

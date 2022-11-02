@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - "staging"
-      - "feat/mvp"
+      - "6-swap-panic-calls-for-gcp-error-reporting-pkg"
 jobs:
   build-deploy-cloud-function:
     permissions:
@@ -34,7 +34,7 @@ jobs:
           --gen2
           --region=us-central1
           --source=.
-          --runtime=go116
+          --runtime=go118
           --trigger-http
           --allow-unauthenticated
           --entry-point=ServeShorty

@@ -24,7 +24,10 @@ func TestPOSTLink(t *testing.T) {
 
 		store := inmem.NewStore()
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		handlers.NewServer(service).ServeHTTP(response, request)
 		var got shorty.Link
 		d := json.NewDecoder(response.Body)
@@ -44,7 +47,10 @@ func TestGETLink(t *testing.T) {
 		"abc123": {Code: "abc123"},
 	}
 
-	service := handlers.NewAPIService(store, "", "test-api-key")
+	service := handlers.NewAPIService(handlers.ServiceConfig{
+		Store:  store,
+		APIkey: "test-api-key",
+	})
 	server := handlers.NewServer(service)
 
 	tests := []struct {
@@ -87,7 +93,10 @@ func TestGETLinks(t *testing.T) {
 			"abc123": {Code: "abc123"},
 		}
 
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 
 		wantBody := `[{"shortUrl":"","code":"abc123","customCode":"","originalUrl":"","totalClicks":0,"createdBy":"","createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}]` + "\n"
@@ -103,7 +112,10 @@ func TestGETLinks(t *testing.T) {
 
 	t.Run("returns empty list if there a no links in the store", func(t *testing.T) {
 		store := inmem.NewStore()
-		service := handlers.NewAPIService(store, "", "test-api-key")
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
 		server := handlers.NewServer(service)
 
 		wantBody := "[]\n"
