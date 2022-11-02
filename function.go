@@ -75,7 +75,7 @@ func initErrorReporting() (*errorreporting.Client, error) {
 	}
 
 	ctx := context.Background()
-	projectID := os.Getenv("GCP_PROJECT")
+	projectID := os.Getenv("GCP_PROJECT_ID")
 	errorClient, err := errorreporting.NewClient(ctx, projectID, errorreporting.Config{
 		ServiceName: "url-shortener",
 		OnError: func(err error) {
