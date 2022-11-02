@@ -28,7 +28,7 @@ func (s *ShortyService) renderNotFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	t, err := template.ParseFS(content, "html/not-found.html")
 	if err != nil {
-		s.logError(fmt.Errorf("unable to load template: %v", err))
+		s.logError(fmt.Errorf("unable to load template: %v", err), s.getTrace(r))
 		s.renderServerError(w, r, "")
 		return
 	}
@@ -39,7 +39,7 @@ func (s *ShortyService) renderNotFound(w http.ResponseWriter, r *http.Request) {
 		Title: s.serviceName,
 	})
 	if err != nil {
-		s.logError(fmt.Errorf("unable to render template: %v", err))
+		s.logError(fmt.Errorf("unable to render template: %v", err), s.getTrace(r))
 		s.renderServerError(w, r, "")
 		return
 	}
@@ -52,7 +52,7 @@ func (s *ShortyService) renderServerError(w http.ResponseWriter, r *http.Request
 	t, err := template.ParseFS(content, "html/server-error.html")
 	if err != nil {
 		// This should never happen
-		s.logError(fmt.Errorf("unable to load template: %v", err))
+		s.logError(fmt.Errorf("unable to load template: %v", err), s.getTrace(r))
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -67,7 +67,7 @@ func (s *ShortyService) renderServerError(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		// This should never happen
-		s.logError(fmt.Errorf("unable to render template: %v", err))
+		s.logError(fmt.Errorf("unable to render template: %v", err), s.getTrace(r))
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}

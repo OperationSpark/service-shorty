@@ -19,6 +19,11 @@ func init() {
 	// This handler name maps to the entry point name in the Google Cloud Function platform.
 	// https://cloud.google.com/functions/docs/writing/write-http-functions
 	functions.HTTP("ServeShorty", NewApp().ServeHTTP)
+
+	// Disable log prefixes such as the default timestamp.
+	// Prefix text prevents the message from being parsed as JSON.
+	// A timestamp is added when shipping logs to Cloud Logging.
+	log.SetFlags(0)
 }
 
 var store handlers.LinkStore
