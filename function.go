@@ -70,6 +70,10 @@ func initStore() (handlers.LinkStore, error) {
 }
 
 func initErrorReporting() (*errorreporting.Client, error) {
+	if os.Getenv("CI") == "true" {
+		return &errorreporting.Client{}, nil
+	}
+
 	ctx := context.Background()
 	projectID := os.Getenv("GCP_PROJECT")
 	errorClient, err := errorreporting.NewClient(ctx, projectID, errorreporting.Config{
@@ -82,11 +86,4 @@ func initErrorReporting() (*errorreporting.Client, error) {
 		return nil, err
 	}
 	return errorClient, nil
-}
-
-func logAndPrintError(err error) {
-	errorClient.Report(errorreporting.Entry{
-		Error: err,
-	})
-	log.Print(err)
 }
