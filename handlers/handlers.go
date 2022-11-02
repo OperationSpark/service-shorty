@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/errorreporting"
 	"github.com/operationspark/shorty/shorty"
 )
 
@@ -29,25 +30,38 @@ type (
 		baseURL     string
 		serviceName string
 		apiKey      string
+		errorClient Reporter
+	}
+
+	Reporter interface {
+		Report(errorreporting.Entry)
+	}
+
+	ServiceConfig struct {
+		Store       LinkStore
+		BaseURL     string
+		APIkey      string
+		ErrorClient *errorreporting.Client
 	}
 )
 
-func NewAPIService(store LinkStore, baseURL, APIkey string) *ShortyService {
+func NewAPIService(c ServiceConfig) *ShortyService {
 	_baseURL := "https://ospk.org"
-	if len(baseURL) > 0 {
-		_baseURL = baseURL
+	if len(c.BaseURL) > 0 {
+		_baseURL = c.BaseURL
 	}
 
 	_apiKey := os.Getenv("API_KEY")
-	if len(APIkey) > 0 {
-		_apiKey = APIkey
+	if len(c.APIkey) > 0 {
+		_apiKey = c.APIkey
 	}
 
 	return &ShortyService{
-		store:       store,
+		store:       c.Store,
 		baseURL:     strings.TrimSuffix(_baseURL, "/"),
 		serviceName: "system",
 		apiKey:      _apiKey,
+		errorClient: c.ErrorClient,
 	}
 }
 
