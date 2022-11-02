@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - "staging"
-      - "feat/mvp"
+      - "6-swap-panic-calls-for-gcp-error-reporting-pkg"
 jobs:
   build-deploy-cloud-function:
     permissions:
@@ -34,13 +34,13 @@ jobs:
           --gen2
           --region=us-central1
           --source=.
-          --runtime=go116
+          --runtime=go118
           --trigger-http
           --allow-unauthenticated
           --entry-point=ServeShorty
           --max-instances=5
           --project=operationspark-org
           --set-build-env-vars=GOFLAGS=-mod=mod
-          --set-env-vars=MONGO_URI="${{secrets.MONGO_URI}}",MONGO_DB_NAME="${{secrets.MONGO_DB_NAME}}",API_KEY="${{secrets.API_KEY}}",HOST_BASE_URL="${{secrets.HOST_BASE_URL}}"
+          --set-env-vars=MONGO_URI="${{secrets.MONGO_URI}}",MONGO_DB_NAME="${{secrets.MONGO_DB_NAME}}",API_KEY="${{secrets.API_KEY}}",HOST_BASE_URL="${{secrets.HOST_BASE_URL}}",GCP_PROJECT_ID="${{secrets.GCP_PROJECT_ID}}"
       - id: "trigger-url"
         run: 'echo "${{ steps.deploy.outputs.url }}"'

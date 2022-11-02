@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", function.NewMux().ServeHTTP); err != nil {
+	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", function.NewApp().ServeHTTP); err != nil {
 		log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
 	}
 
