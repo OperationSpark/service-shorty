@@ -40,21 +40,20 @@ func NewStore(o StoreOpts) (*Store, error) {
 
 	// Ping the primary
 	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-		panic(err)
+		return &Store{}, fmt.Errorf("ping: %v", err)
 	}
-	fmt.Println("Successfully connected and pinged.")
 
 	// Grab the DB Name from the connection URI or Env vars
 	connectionURI, err := url.Parse(o.URI)
 	if err != nil {
-		panic(err)
+		return &Store{}, fmt.Errorf("parse: %v", err)
 	}
+
 	dbName := strings.TrimPrefix(connectionURI.Path, "/")
 	envDBName := os.Getenv("MONGO_DB_NAME")
 	if len(envDBName) > 0 {
 		dbName = envDBName
 	}
-	fmt.Println("Database name: " + dbName)
 
 	s := Store{
 		Client:        client,
