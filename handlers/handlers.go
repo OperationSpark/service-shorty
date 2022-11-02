@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -68,7 +69,10 @@ func NewAPIService(c ServiceConfig) *ShortyService {
 func NewServer(apiService *ShortyService) *http.ServeMux {
 	html, err := fs.Sub(content, "html")
 	if err != nil {
-		panic(err)
+		apiService.errorClient.Report(errorreporting.Entry{
+			Error: fmt.Errorf("create html filesystem: %v", err),
+		})
+		log.Fatal("could not start")
 	}
 
 	mux := http.NewServeMux()
@@ -135,8 +139,10 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 			s.renderNotFound(w, r)
 			return
 		}
-		http.Error(w, "Could not resolve link", http.StatusInternalServerError)
-		panic(fmt.Errorf("findLink: %v", err))
+		s.renderServerError(w, r, "Could not resolve link")
+		s.errorClient.Report(errorreporting.Entry{
+			Error: fmt.Errorf("findLink: %v", err),
+		})
 	}
 
 	_, err = s.store.IncrementTotalClicks(r.Context(), code)
@@ -164,9 +170,13 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 		codeIsUsed, err := s.store.CheckCodeInUse(r.Context(), linkInput.CustomCode)
 		if err != nil {
 			// This should not happen
+			s.errorClient.Report(errorreporting.Entry{
+				Error: fmt.Errorf("checkCodeInUse: %v", err),
+			})
 			http.Error(w, "could not check code", http.StatusInternalServerError)
-			panic(err)
+			return
 		}
+
 		if codeIsUsed {
 			http.Error(w, fmt.Sprintf(`code: %q already in use.`, linkInput.CustomCode), http.StatusConflict)
 			return
@@ -180,15 +190,17 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 
 	newLink, err := s.store.SaveLink(r.Context(), linkInput)
 	if err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("createLink: SaveLink: %v", err)})
 		http.Error(w, "Problem creating short link", http.StatusInternalServerError)
-		panic(fmt.Errorf("createLink: SaveLink: %v", err))
+		return
 	}
 
 	// Send new link JSON
 	w.WriteHeader(http.StatusCreated)
 	if err = newLink.ToJSON(w); err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("createLink: toJSON: %v", err)})
 		http.Error(w, "Problem marshaling your short link", http.StatusInternalServerError)
-		panic(fmt.Errorf("createLink: toJSON: %v", err))
+		return
 	}
 }
 
@@ -204,13 +216,15 @@ func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
+
 		// Other errors
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("getLinks: FindLink: %v", err)})
 		http.Error(
 			w,
 			fmt.Sprintf("Could not retrieve link: %q\n", code),
 			http.StatusInternalServerError,
 		)
-		panic(fmt.Errorf("getLinks: FindLink: %v", err))
+		return
 	}
 	link.ToJSON(w)
 }
@@ -218,13 +232,15 @@ func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 func (s *ShortyService) getLinks(w http.ResponseWriter, r *http.Request) {
 	links, err := s.store.FindAllLinks(r.Context())
 	if err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("getLinks: FindAllLinks: %v", err)})
 		http.Error(w, "Could not retrieve links", http.StatusInternalServerError)
-		panic(fmt.Errorf("getLinks: FindAllLinks: %v", err))
+		return
 	}
 
 	if err = links.ToJSON(w); err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("getLinks: ToJSON: %v", err)})
 		http.Error(w, "Problem marshaling your links", http.StatusInternalServerError)
-		panic(fmt.Errorf("getLinks: ToJSON: %v", err))
+		return
 	}
 }
 
@@ -232,6 +248,7 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 	var link shorty.Link
 	err := link.FromJSON(r.Body)
 	if err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("fromJSON: %v", err)})
 		http.Error(w, shorty.ErrJSONUnmarshal.Error(), http.StatusBadRequest)
 		return
 	}
@@ -239,8 +256,9 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 	if len(link.CustomCode) > 0 {
 		isUsed, err := s.store.CheckCodeInUse(r.Context(), link.CustomCode)
 		if err != nil {
+			s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("checkCodeInUse: %v", err)})
 			http.Error(w, "Could not check customCode", http.StatusInternalServerError)
-			panic(fmt.Errorf("checkCodeInUse: %v", err))
+			return
 		}
 		if isUsed {
 			http.Error(w, shorty.ErrCodeInUse.Error(), http.StatusConflict)
@@ -255,15 +273,17 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, shorty.ErrLinkNotFound.Error(), http.StatusNotFound)
 			return
 		}
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("updateLink: %v", err)})
 		http.Error(w, "Could not update link", http.StatusInternalServerError)
-		panic(fmt.Errorf("updateLink: %v", err))
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	err = updated.ToJSON(w)
 	if err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("toJSON: %v", err)})
 		http.Error(w, "Problem marshaling link", http.StatusInternalServerError)
-		panic(fmt.Errorf("toJSON: %v", err))
+		return
 	}
 }
 
@@ -271,8 +291,9 @@ func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
 	code := parseLinkCode(r.URL.Path)
 	count, err := s.store.DeleteLink(r.Context(), code)
 	if err != nil {
+		s.errorClient.Report(errorreporting.Entry{Error: fmt.Errorf("deleteLink: %v", err)})
 		http.Error(w, "Could not delete link", http.StatusInternalServerError)
-		panic(fmt.Errorf("deleteLink: %v", err))
+		return
 	}
 	fmt.Fprint(w, count)
 }
