@@ -176,14 +176,18 @@ func TestPOSTLinkIntegration(t *testing.T) {
 		request := NewRequestWithAPIKey(
 			http.MethodPost,
 			"/api/urls/",
-			strings.NewReader(`{"originalUrl": "aol.com"}`),
+			strings.NewReader(`{"originalUrl": "altavista.com"}`),
 		)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
 
 		testutil.AssertStatus(t, response.Code, http.StatusBadRequest)
-		testutil.AssertResponseBody(t, response.Body.String(), "Relative URLs are not supported. URL must be absolute.")
+		testutil.AssertResponseBody(
+			t,
+			response.Body.String(),
+			`URL: "altavista.com" is relative. URLs must be absolute`+"\n",
+		)
 	})
 }
 

@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -195,6 +197,15 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := validateURL(linkInput.OriginalUrl); err != nil {
+		if errors.Is(err, shorty.ErrRelativeURL) {
+			http.Error(w, fmt.Sprintf("URL: %q is relative. URLs must be absolute", linkInput.OriginalUrl), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
 	// Use CustomCode if set and available
 	if len(linkInput.CustomCode) > 0 {
 		codeIsUsed, err := s.store.CheckCodeInUse(r.Context(), linkInput.CustomCode)
@@ -328,4 +339,15 @@ func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
 
 func parseLinkCode(URLPath string) string {
 	return strings.ReplaceAll(strings.TrimPrefix(URLPath, "/api/urls"), "/", "")
+}
+
+func validateURL(toShorten string) error {
+	u, err := url.Parse(toShorten)
+	if err != nil {
+		return shorty.ErrInvalidURL
+	}
+	if !u.IsAbs() {
+		return shorty.ErrRelativeURL
+	}
+	return nil
 }
