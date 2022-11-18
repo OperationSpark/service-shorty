@@ -161,8 +161,29 @@ func TestPOSTLinkIntegration(t *testing.T) {
 		testutil.AssertContains(t, secondResp.Body.String(), `code: "123" already in use`)
 	})
 
-	t.Run("reuses code if no 'originalUrl' field matches an existing link", func(t *testing.T) {
-		t.Skip("TODO")
+	t.Run("errors if 'originalUrl' is not an absolute URL", func(t *testing.T) {
+		store := &mongodb.Store{
+			Client:        dbClient,
+			DBName:        dbName,
+			LinksCollName: urlCollName,
+		}
+		service := handlers.NewAPIService(handlers.ServiceConfig{
+			Store:  store,
+			APIkey: "test-api-key",
+		})
+		server := handlers.NewServer(service)
+
+		request := NewRequestWithAPIKey(
+			http.MethodPost,
+			"/api/urls/",
+			strings.NewReader(`{"originalUrl": "aol.com"}`),
+		)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		testutil.AssertStatus(t, response.Code, http.StatusBadRequest)
+		testutil.AssertResponseBody(t, response.Body.String(), "Relative URLs are not supported. URL must be absolute.")
 	})
 }
 
