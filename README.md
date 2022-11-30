@@ -187,7 +187,7 @@ Response: "https://ospk.org/:code"
 
 | Key        | Type     | Required | Description                          |
 | ---------- | -------- | -------- | ------------------------------------ |
-| url        | `string` | `true`   | Original URL                         |
+| originalUrl        | `string` | `true`   | Original URL                         |
 | customCode | `string` |          | Custom endpoint - Defaults to `code` |
 | createdBy  | `string` |          | User or bot that created the link    |
 
@@ -261,7 +261,7 @@ PUT /api/urls/:code
 
 | Key        | Type     | Description                          |
 | ---------- | -------- | ------------------------------------ |
-| url        | `string` | Original URL                         |
+| originalUrl        | `string` | Original URL                         |
 | customCode | `string` | Custom endpoint - Defaults to `code` |
 | createdBy  | `string` | User or bot that created the link    |
 
