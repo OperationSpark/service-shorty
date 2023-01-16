@@ -182,7 +182,7 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		// Redirect even if there is an error. Client should not suffer if the clicks can't be updated.
 		fmt.Fprintf(os.Stderr, "could not update TotalClick count: %v", err)
 	}
-	http.Redirect(w, r, link.OriginalUrl, http.StatusPermanentRedirect)
+	http.Redirect(w, r, link.OriginalUrl, http.StatusTemporaryRedirect)
 }
 
 func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {

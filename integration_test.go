@@ -396,7 +396,7 @@ func TestCreateLinkAndRedirect(t *testing.T) {
 
 		server.ServeHTTP(redirectResp, useLinkReq)
 
-		testutil.AssertStatus(t, redirectResp.Code, http.StatusPermanentRedirect)
+		testutil.AssertStatus(t, redirectResp.Code, http.StatusTemporaryRedirect)
 		testutil.AssertContains(t, redirectResp.Body.String(), originalURL)
 
 		// Check click count increment
