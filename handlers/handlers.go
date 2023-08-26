@@ -355,7 +355,6 @@ func parseLinkCode(URLPath string) *ShortCodeData {
 
 	codes := strings.Split(path, "/")
 
-	println("")
 	if len(codes) == 0 {
 		return &ShortCodeData{
 			code: "",
