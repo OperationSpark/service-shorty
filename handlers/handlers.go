@@ -166,6 +166,11 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path == "/" {
+		http.Redirect(w, r, "https://www.operationspark.org", http.StatusTemporaryRedirect)
+		return
+	}
+
 	code := parseLinkCode(r.URL.Path)
 	link, err := s.store.FindLink(r.Context(), code)
 	if err != nil {
