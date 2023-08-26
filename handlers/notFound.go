@@ -33,9 +33,9 @@ func (s *ShortyService) renderNotFound(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := parseLinkCode(r.URL.Path)
+	codeData := parseLinkCode(r.URL.Path)
 	err = t.Execute(w, notFoundTemplateData{
-		Code:  code,
+		Code:  codeData.code,
 		Title: s.serviceName,
 	})
 	if err != nil {
