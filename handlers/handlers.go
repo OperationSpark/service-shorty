@@ -43,6 +43,11 @@ type (
 		APIkey      string
 		ErrorClient *errorreporting.Client
 	}
+
+	ShortCodeData struct {
+		code string
+		tag  string
+	}
 )
 
 func NewAPIService(c ServiceConfig) *ShortyService {
@@ -143,8 +148,8 @@ func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case http.MethodGet:
-		code := parseLinkCode(r.URL.Path)
-		if len(code) == 0 {
+		codeData := parseLinkCode(r.URL.Path)
+		if len(codeData.code) == 0 {
 			s.getLinks(w, r)
 			return
 		}
@@ -166,8 +171,14 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := parseLinkCode(r.URL.Path)
-	link, err := s.store.FindLink(r.Context(), code)
+	if r.URL.Path == "/" {
+		http.Redirect(w, r, "https://www.operationspark.org", http.StatusTemporaryRedirect)
+		return
+	}
+
+	codeData := parseLinkCode(r.URL.Path)
+
+	link, err := s.store.FindLink(r.Context(), codeData.code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			s.renderNotFound(w, r)
@@ -177,7 +188,7 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		s.logError(fmt.Errorf("findLink: %v", err), s.getTrace(r))
 	}
 
-	_, err = s.store.IncrementTotalClicks(r.Context(), code)
+	_, err = s.store.IncrementTotalClicks(r.Context(), codeData.code)
 	if err != nil {
 		// Redirect even if there is an error. Client should not suffer if the clicks can't be updated.
 		fmt.Fprintf(os.Stderr, "could not update TotalClick count: %v", err)
@@ -244,13 +255,13 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
-	code := parseLinkCode(r.URL.Path)
-	link, err := s.store.FindLink(r.Context(), code)
+	codeData := parseLinkCode(r.URL.Path)
+	link, err := s.store.FindLink(r.Context(), codeData.code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			http.Error(
 				w,
-				fmt.Sprintf("Link not found: %q", code),
+				fmt.Sprintf("Link not found: %q", codeData.code),
 				http.StatusNotFound,
 			)
 			return
@@ -260,7 +271,7 @@ func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 		s.logError(fmt.Errorf("getLinks: FindLink: %v", err), s.getTrace(r))
 		http.Error(
 			w,
-			fmt.Sprintf("Could not retrieve link: %q\n", code),
+			fmt.Sprintf("Could not retrieve link: %q\n", codeData.code),
 			http.StatusInternalServerError,
 		)
 		return
@@ -305,8 +316,8 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 		}
 		link.GenCode(s.baseURL)
 	}
-	code := parseLinkCode(r.URL.Path)
-	updated, err := s.store.UpdateLink(r.Context(), code, link)
+	codeData := parseLinkCode(r.URL.Path)
+	updated, err := s.store.UpdateLink(r.Context(), codeData.code, link)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			http.Error(w, shorty.ErrLinkNotFound.Error(), http.StatusNotFound)
@@ -327,8 +338,8 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
-	code := parseLinkCode(r.URL.Path)
-	count, err := s.store.DeleteLink(r.Context(), code)
+	codeData := parseLinkCode(r.URL.Path)
+	count, err := s.store.DeleteLink(r.Context(), codeData.code)
 	if err != nil {
 		s.logError(fmt.Errorf("deleteLink: %v", err), s.getTrace(r))
 		http.Error(w, "Could not delete link", http.StatusInternalServerError)
@@ -337,8 +348,32 @@ func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, count)
 }
 
-func parseLinkCode(URLPath string) string {
-	return strings.ReplaceAll(strings.TrimPrefix(URLPath, "/api/urls"), "/", "")
+func parseLinkCode(URLPath string) *ShortCodeData {
+	// parse code and tag from link path ex: /api/urls/abc123/tag
+	path := strings.TrimPrefix(URLPath, "/api/urls")
+	path = strings.Trim(path, "/")
+
+	codes := strings.Split(path, "/")
+
+	if len(codes) == 0 {
+		return &ShortCodeData{
+			code: "",
+			tag:  "",
+		}
+	}
+
+	if len(codes) == 1 {
+		return &ShortCodeData{
+			code: codes[0],
+			tag:  "",
+		}
+	}
+
+	return &ShortCodeData{
+		code: codes[0],
+		tag:  codes[1],
+	}
+
 }
 
 func validateURL(toShorten string) error {
