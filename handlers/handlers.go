@@ -178,10 +178,6 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 
 	codeData := parseLinkCode(r.URL.Path)
 
-	// TODO: Delete logs when feature is implemented
-	fmt.Printf("codeData.code: '%s'\n", codeData.code)
-	fmt.Printf("codeData.tag: '%s'\n", codeData.tag)
-
 	link, err := s.store.FindLink(r.Context(), codeData.code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
@@ -354,10 +350,12 @@ func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
 
 func parseLinkCode(URLPath string) *ShortCodeData {
 	// parse code and tag from link path ex: /api/urls/abc123/tag
-	path := strings.TrimPrefix(URLPath, "/api/urls/")
-	path = strings.TrimPrefix(path, "/")
+	path := strings.TrimPrefix(URLPath, "/api/urls")
+	path = strings.Trim(path, "/")
+
 	codes := strings.Split(path, "/")
 
+	println("")
 	if len(codes) == 0 {
 		return &ShortCodeData{
 			code: "",
