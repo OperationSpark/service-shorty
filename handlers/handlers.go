@@ -358,12 +358,25 @@ func parseLinkCode(URLPath string) *ShortCodeData {
 	path = strings.TrimPrefix(path, "/")
 	codes := strings.Split(path, "/")
 
-	codeData := &ShortCodeData{
+	if len(codes) == 0 {
+		return &ShortCodeData{
+			code: "",
+			tag:  "",
+		}
+	}
+
+	if len(codes) == 1 {
+		return &ShortCodeData{
+			code: codes[0],
+			tag:  "",
+		}
+	}
+
+	return &ShortCodeData{
 		code: codes[0],
 		tag:  codes[1],
 	}
 
-	return codeData
 }
 
 func validateURL(toShorten string) error {
