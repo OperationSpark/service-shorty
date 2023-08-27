@@ -11,23 +11,58 @@ type (
 	Link struct {
 		// Shortened URL result. Ex: https://ospk.org/bas12d21dc.
 		ShortURL string `json:"shortUrl" bson:"shortUrl"`
+
 		// Short Code used as the path of the short URL. Ex: bas12d21dc.
 		Code string `json:"code" bson:"code"`
+
 		// Optional custom short code passed when creating or updating the short URL.
 		CustomCode string `json:"customCode" bson:"customCode"`
+
 		// The URL where the short URL redirects.
 		OriginalUrl string `json:"originalUrl" bson:"originalUrl"`
+
 		// Count of times the short URL has been used.
 		TotalClicks int `json:"totalClicks" bson:"totalClicks"`
+
 		// Identifier of the entity that created the short URL.
 		CreatedBy string `json:"createdBy" bson:"createdBy"`
+
 		// DateTime the URL was created.
 		CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+
 		// DateTime the URL was last updated.
 		UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 	}
 
 	Links []*Link
+
+	Tag struct {
+		// Short Code used as the optional second param of the short URL path. Ex: /:shortCode/abc123
+		//  /:shortCode/:tagCode
+		Code string `json:"code" bson:"code"`
+
+		// List of click/url history for the tag.
+		Activity []struct {
+			// DateTime the tag was created.
+			CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+
+			// Short URL code used
+			ShortCode string `json:"shortCode" bson:"shortCode"`
+		} `json:"activity" bson:"activity"`
+
+		Data map[string]interface{} `json:"data" bson:"data"`
+
+		// Identifier of the entity that created the short URL.
+		CreatedBy string `json:"createdBy" bson:"createdBy"`
+
+		// DateTime the tag was created.
+		CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+
+		// DateTime the tag was last updated.
+		UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+	}
+
+	Tags []*Tag
 )
 
 // FromJSON unmarshals a request's JSON body into a Link.

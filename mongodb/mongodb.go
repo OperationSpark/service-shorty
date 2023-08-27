@@ -21,10 +21,19 @@ type (
 		Client        *mongo.Client
 		DBName        string
 		LinksCollName string
+		TagsCollName  string
 	}
 
 	StoreOpts struct {
 		URI string
+	}
+
+	Activity struct {
+		// DateTime the tag was created.
+		CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+
+		// Short URL code used
+		ShortCode string `json:"shortCode" bson:"shortCode"`
 	}
 )
 
@@ -60,9 +69,83 @@ func NewStore(o StoreOpts) (*Store, error) {
 		Client:        client,
 		DBName:        dbName,
 		LinksCollName: "urls",
+		TagsCollName:  "tags",
 	}
 
 	return &s, nil
+}
+
+// SaveTag inserts a new Tag into the database.
+func (i *Store) SaveTag(ctx context.Context, newTag shorty.Tag) (shorty.Tag, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.TagsCollName)
+	_, err := coll.InsertOne(ctx, newTag)
+	if err != nil {
+		return shorty.Tag{}, fmt.Errorf("insertOne: %v", err)
+	}
+	return newTag, nil
+}
+
+// IncrementTotalClicks increments the "totalClicks" field and updates the database.
+func (i *Store) AddTagActivity(ctx context.Context, code string) (int, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.TagsCollName)
+	res, err := coll.UpdateOne(
+		ctx,
+		bson.D{{Key: "code", Value: code}},
+		bson.D{
+			{Key: "$push", Value: bson.D{{
+				Key:   "activity",
+				Value: bson.D{{Key: code, Value: time.Now()}},
+			}}},
+		},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("Tags > updateOne: %v", err)
+	}
+	if res.ModifiedCount == 0 {
+		return 0, shorty.ErrLinkNotFound
+	}
+	return int(res.ModifiedCount), nil
+}
+
+func (i *Store) FindTag(ctx context.Context, code string) (shorty.Tag, error) {
+	var tag shorty.Tag
+	coll := i.Client.Database(i.DBName).Collection(i.TagsCollName)
+
+	res := coll.FindOne(ctx, bson.D{{Key: "code", Value: code}})
+	if res.Err() != nil {
+		if res.Err() == mongo.ErrNoDocuments {
+			return tag, shorty.ErrLinkNotFound
+		}
+		return tag, fmt.Errorf("Tags > findOne: %v", res.Err())
+	}
+
+	err := res.Decode(&tag)
+	if err != nil {
+		return tag, fmt.Errorf("decode: %v", err)
+	}
+	return tag, nil
+}
+
+func (i *Store) FindAllTags(ctx context.Context) (shorty.Tags, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.TagsCollName)
+	cur, err := coll.Find(ctx, bson.D{{}})
+	if err != nil {
+		return shorty.Tags{}, fmt.Errorf("find: %v", err)
+	}
+	defer cur.Close(ctx)
+
+	tags := make(shorty.Tags, cur.RemainingBatchLength())
+	cur.All(ctx, &tags)
+	return tags, nil
+}
+
+func (i *Store) DeleteTag(ctx context.Context, code string) (int, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.TagsCollName)
+	res, err := coll.DeleteOne(ctx, bson.D{{Key: "code", Value: code}})
+	if err != nil {
+		return 0, fmt.Errorf("deleteOne: %v", err)
+	}
+	return int(res.DeletedCount), nil
 }
 
 // SaveLink inserts a new Link into the database.
