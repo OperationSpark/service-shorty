@@ -1,6 +1,6 @@
 # **URL Shortening Service (Go)**
 
-![Coverage](https://img.shields.io/badge/Coverage-55.7%25-yellow)
+![Coverage](https://img.shields.io/badge/Coverage-51.4%25-yellow)
 
 Create short URLs, resolve shortened URLs, and fetch all shortened URLs.
 
@@ -27,18 +27,25 @@ Loosely based on Nic Jackson's [microservice tutorials](https://github.com/nicho
 type Link struct {
   // Shortened URL result. Ex: https://ospk.org/bas12d21dc.
   ShortURL string `json:"shortUrl" bson:"shortUrl"`
+
   // Short Code used as the path of the short URL. Ex: bas12d21dc.
   Code string `json:"code" bson:"code"`
+
   // Optional custom short code passed when creating or updating the short URL.
   CustomCode string `json:"customCode" bson:"customCode"`
+
   // The URL where the short URL redirects.
   OriginalUrl string `json:"originalUrl" bson:"originalUrl"`
+
   // Count of times the short URL has been used.
   TotalClicks int `json:"totalClicks" bson:"totalClicks"`
+
   // Identifier of the entity that created the short URL.
   CreatedBy string `json:"createdBy" bson:"createdBy"`
+
   // DateTime the URL was created.
   CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+
   // DateTime the URL was last updated.
   UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }

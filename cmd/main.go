@@ -20,7 +20,10 @@ func main() {
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		port = envPort
 	}
+	println("Server started at http://localhost:" + port)
+
 	if err := funcframework.Start(port); err != nil {
 		log.Fatalf("funcframework.Start: %v\n", err)
 	}
+
 }

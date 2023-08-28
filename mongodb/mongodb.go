@@ -21,14 +21,24 @@ type (
 		Client        *mongo.Client
 		DBName        string
 		LinksCollName string
+		TagsCollName  string
 	}
 
 	StoreOpts struct {
 		URI string
 	}
+
+	Activity struct {
+		// DateTime the tag was created.
+		CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+
+		// Short URL code used
+		ShortCode string `json:"shortCode" bson:"shortCode"`
+	}
 )
 
 // NewStore creates an empty Shorty store.
+// MongoDB Connection to database "url-shortener"
 func NewStore(o StoreOpts) (*Store, error) {
 	client, err := mongo.Connect(
 		context.TODO(),
@@ -59,9 +69,32 @@ func NewStore(o StoreOpts) (*Store, error) {
 		Client:        client,
 		DBName:        dbName,
 		LinksCollName: "urls",
+		TagsCollName:  "tags",
 	}
 
 	return &s, nil
+}
+
+// IncrementTotalClicks increments the "totalClicks" field and updates the database.
+func (i *Store) AddTagActivity(ctx context.Context, codeData shorty.ShortCodeData) (int, error) {
+	coll := i.Client.Database(i.DBName).Collection(i.TagsCollName)
+	res, err := coll.UpdateOne(
+		ctx,
+		bson.D{{Key: "code", Value: codeData.Tag}},
+		bson.D{
+			{Key: "$push", Value: bson.D{{
+				Key:   "activity",
+				Value: bson.D{{Key: codeData.Code, Value: time.Now()}},
+			}}},
+		},
+	)
+	if err != nil {
+		return 0, fmt.Errorf("Tags > updateOne: %v", err)
+	}
+	if res.ModifiedCount == 0 {
+		return 0, shorty.ErrLinkNotFound
+	}
+	return int(res.ModifiedCount), nil
 }
 
 // SaveLink inserts a new Link into the database.
@@ -79,10 +112,10 @@ func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, err
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 	res, err := coll.UpdateOne(
 		ctx,
-		bson.D{{"code", code}},
+		bson.D{{Key: "code", Value: code}},
 		bson.D{
-			{"$inc", bson.D{{"totalClicks", 1}}},
-			{"$set", bson.D{{"updatedAt", time.Now()}}},
+			{Key: "$inc", Value: bson.D{{Key: "totalClicks", Value: 1}}},
+			{Key: "$set", Value: bson.D{{Key: "updatedAt", Value: time.Now()}}},
 		},
 	)
 	if err != nil {
@@ -99,7 +132,7 @@ func (i *Store) FindLink(ctx context.Context, code string) (shorty.Link, error) 
 	var link shorty.Link
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 
-	res := coll.FindOne(ctx, bson.D{{"code", code}})
+	res := coll.FindOne(ctx, bson.D{{Key: "code", Value: code}})
 	if res.Err() != nil {
 		if res.Err() == mongo.ErrNoDocuments {
 			return link, shorty.ErrLinkNotFound
@@ -133,23 +166,23 @@ func (i *Store) UpdateLink(ctx context.Context, code string, link shorty.Link) (
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
 
 	updateDoc := bson.D{
-		{"updatedAt", time.Now()},
+		{Key: "updatedAt", Value: time.Now()},
 	}
 	if len(link.OriginalUrl) > 0 {
-		updateDoc = append(updateDoc, bson.E{"originalUrl", link.OriginalUrl})
+		updateDoc = append(updateDoc, bson.E{Key: "originalUrl", Value: link.OriginalUrl})
 	}
 
 	if len(link.CustomCode) > 0 {
 		updateDoc = append(updateDoc,
-			bson.E{"shortUrl", link.ShortURL},
-			bson.E{"code", link.Code},
-			bson.E{"customCode", link.CustomCode},
+			bson.E{Key: "shortUrl", Value: link.ShortURL},
+			bson.E{Key: "code", Value: link.Code},
+			bson.E{Key: "customCode", Value: link.CustomCode},
 		)
 	}
 	res, err := coll.UpdateOne(
 		ctx,
-		bson.D{{"code", code}},
-		bson.D{{"$set", updateDoc}},
+		bson.D{{Key: "code", Value: code}},
+		bson.D{{Key: "$set", Value: updateDoc}},
 	)
 
 	if err != nil {
@@ -164,7 +197,7 @@ func (i *Store) UpdateLink(ctx context.Context, code string, link shorty.Link) (
 // DeleteLink deletes a link from the database.
 func (i *Store) DeleteLink(ctx context.Context, code string) (int, error) {
 	coll := i.Client.Database(i.DBName).Collection(i.LinksCollName)
-	res, err := coll.DeleteOne(ctx, bson.D{{"code", code}})
+	res, err := coll.DeleteOne(ctx, bson.D{{Key: "code", Value: code}})
 	if err != nil {
 		return 0, fmt.Errorf("deleteOne: %v", err)
 	}
