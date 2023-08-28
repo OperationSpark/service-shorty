@@ -26,6 +26,7 @@ type (
 		DeleteLink(ctx context.Context, code string) (int, error)
 		CheckCodeInUse(ctx context.Context, code string) (bool, error)
 		IncrementTotalClicks(ctx context.Context, code string) (int, error)
+		AddTagActivity(ctx context.Context, codeData shorty.ShortCodeData) (int, error)
 	}
 
 	ShortyService struct {
@@ -42,11 +43,6 @@ type (
 		BaseURL     string
 		APIkey      string
 		ErrorClient *errorreporting.Client
-	}
-
-	ShortCodeData struct {
-		code string
-		tag  string
 	}
 )
 
@@ -149,7 +145,7 @@ func (s *ShortyService) ServeAPI(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodGet:
 		codeData := parseLinkCode(r.URL.Path)
-		if len(codeData.code) == 0 {
+		if len(codeData.Code) == 0 {
 			s.getLinks(w, r)
 			return
 		}
@@ -178,7 +174,7 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 
 	codeData := parseLinkCode(r.URL.Path)
 
-	link, err := s.store.FindLink(r.Context(), codeData.code)
+	link, err := s.store.FindLink(r.Context(), codeData.Code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			s.renderNotFound(w, r)
@@ -188,11 +184,14 @@ func (s *ShortyService) ServeResolver(w http.ResponseWriter, r *http.Request) {
 		s.logError(fmt.Errorf("findLink: %v", err), s.getTrace(r))
 	}
 
-	_, err = s.store.IncrementTotalClicks(r.Context(), codeData.code)
+	_, err = s.store.IncrementTotalClicks(r.Context(), codeData.Code)
 	if err != nil {
 		// Redirect even if there is an error. Client should not suffer if the clicks can't be updated.
 		fmt.Fprintf(os.Stderr, "could not update TotalClick count: %v", err)
 	}
+
+	_, err = s.store.AddTagActivity(r.Context(), codeData)
+
 	http.Redirect(w, r, link.OriginalUrl, http.StatusTemporaryRedirect)
 }
 
@@ -256,12 +255,12 @@ func (s *ShortyService) createLink(w http.ResponseWriter, r *http.Request) {
 
 func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 	codeData := parseLinkCode(r.URL.Path)
-	link, err := s.store.FindLink(r.Context(), codeData.code)
+	link, err := s.store.FindLink(r.Context(), codeData.Code)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			http.Error(
 				w,
-				fmt.Sprintf("Link not found: %q", codeData.code),
+				fmt.Sprintf("Link not found: %q", codeData.Code),
 				http.StatusNotFound,
 			)
 			return
@@ -271,7 +270,7 @@ func (s *ShortyService) getLink(w http.ResponseWriter, r *http.Request) {
 		s.logError(fmt.Errorf("getLinks: FindLink: %v", err), s.getTrace(r))
 		http.Error(
 			w,
-			fmt.Sprintf("Could not retrieve link: %q\n", codeData.code),
+			fmt.Sprintf("Could not retrieve link: %q\n", codeData.Code),
 			http.StatusInternalServerError,
 		)
 		return
@@ -317,7 +316,7 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 		link.GenCode(s.baseURL)
 	}
 	codeData := parseLinkCode(r.URL.Path)
-	updated, err := s.store.UpdateLink(r.Context(), codeData.code, link)
+	updated, err := s.store.UpdateLink(r.Context(), codeData.Code, link)
 	if err != nil {
 		if err == shorty.ErrLinkNotFound {
 			http.Error(w, shorty.ErrLinkNotFound.Error(), http.StatusNotFound)
@@ -339,7 +338,7 @@ func (s *ShortyService) updateLink(w http.ResponseWriter, r *http.Request) {
 
 func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
 	codeData := parseLinkCode(r.URL.Path)
-	count, err := s.store.DeleteLink(r.Context(), codeData.code)
+	count, err := s.store.DeleteLink(r.Context(), codeData.Code)
 	if err != nil {
 		s.logError(fmt.Errorf("deleteLink: %v", err), s.getTrace(r))
 		http.Error(w, "Could not delete link", http.StatusInternalServerError)
@@ -348,7 +347,7 @@ func (s *ShortyService) deleteLink(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, count)
 }
 
-func parseLinkCode(URLPath string) *ShortCodeData {
+func parseLinkCode(URLPath string) shorty.ShortCodeData {
 	// parse code and tag from link path ex: /api/urls/abc123/tag
 	path := strings.TrimPrefix(URLPath, "/api/urls")
 	path = strings.Trim(path, "/")
@@ -356,24 +355,23 @@ func parseLinkCode(URLPath string) *ShortCodeData {
 	codes := strings.Split(path, "/")
 
 	if len(codes) == 0 {
-		return &ShortCodeData{
-			code: "",
-			tag:  "",
+		return shorty.ShortCodeData{
+			Code: "",
+			Tag:  "",
 		}
 	}
 
 	if len(codes) == 1 {
-		return &ShortCodeData{
-			code: codes[0],
-			tag:  "",
+		return shorty.ShortCodeData{
+			Code: codes[0],
+			Tag:  "",
 		}
 	}
 
-	return &ShortCodeData{
-		code: codes[0],
-		tag:  codes[1],
+	return shorty.ShortCodeData{
+		Code: codes[0],
+		Tag:  codes[1],
 	}
-
 }
 
 func validateURL(toShorten string) error {

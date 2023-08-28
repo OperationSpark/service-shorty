@@ -63,6 +63,11 @@ type (
 	}
 
 	Tags []*Tag
+
+	ShortCodeData struct {
+		Code string
+		Tag  string
+	}
 )
 
 // FromJSON unmarshals a request's JSON body into a Link.

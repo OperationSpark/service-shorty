@@ -110,3 +110,7 @@ func (i *Store) IncrementTotalClicks(ctx context.Context, code string) (int, err
 	}
 	return link.TotalClicks, nil
 }
+
+func (i *Store) AddTagActivity(ctx context.Context, codeData shorty.ShortCodeData) (int, error) {
+	return 0, nil
+}
