@@ -13,17 +13,17 @@ jobs:
     environment: staging
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - id: "auth"
-        uses: "google-github-actions/auth@v0"
+        uses: "google-github-actions/auth@v2"
         with:
           credentials_json: "${{ secrets.GCP_SA_CREDS_JSON }}"
 
       # Workaround to support Gen2 Cloud Functions
       # https://github.com/google-github-actions/deploy-cloud-functions/issues/304
       - name: "Set up Cloud SDK"
-        uses: "google-github-actions/setup-gcloud@v0"
+        uses: "google-github-actions/setup-gcloud@v2"
 
       - id: "deploy"
         run: >
@@ -34,7 +34,7 @@ jobs:
           --gen2
           --region=us-central1
           --source=.
-          --runtime=go118
+          --runtime=go122
           --trigger-http
           --allow-unauthenticated
           --entry-point=ServeShorty

@@ -42,7 +42,7 @@ func NewApp() *http.ServeMux {
 		errorClient.Report(errorreporting.Entry{
 			Error: fmt.Errorf("initStore: %v", err),
 		})
-		log.Fatal("Could not start")
+		log.Fatalf("Could not start: %v", err)
 	}
 
 	baseURL := os.Getenv("HOST_BASE_URL")

@@ -1,6 +1,6 @@
 module github.com/operationspark/shorty
 
-go 1.19
+go 1.22
 
 require (
 	cloud.google.com/go/errorreporting v0.2.0
