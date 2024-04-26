@@ -1,0 +1,12 @@
+mode: atomic
+github.com/operationspark/shorty/function.go:14.13,19.2 1 1
+github.com/operationspark/shorty/function.go:23.30,25.16 2 1
+github.com/operationspark/shorty/function.go:29.2,29.31 1 1
+github.com/operationspark/shorty/function.go:25.16,26.13 1 0
+github.com/operationspark/shorty/function.go:33.46,34.31 1 1
+github.com/operationspark/shorty/function.go:37.2,38.24 2 1
+github.com/operationspark/shorty/function.go:42.2,43.16 2 1
+github.com/operationspark/shorty/function.go:46.2,46.19 1 1
+github.com/operationspark/shorty/function.go:34.31,36.3 1 0
+github.com/operationspark/shorty/function.go:38.24,40.3 1 1
+github.com/operationspark/shorty/function.go:43.16,45.3 1 0
