@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/operationspark/shorty/shorty"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
 type (
@@ -31,7 +31,6 @@ type (
 // NewStore creates an empty Shorty store.
 func NewStore(o StoreOpts) (*Store, error) {
 	client, err := mongo.Connect(
-		context.TODO(),
 		options.Client().ApplyURI(o.URI),
 	)
 	if err != nil {

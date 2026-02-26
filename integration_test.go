@@ -16,8 +16,8 @@ import (
 	"github.com/operationspark/shorty/mongodb"
 	"github.com/operationspark/shorty/shorty"
 	"github.com/operationspark/shorty/testutil"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // The MongoDB client for this tests are setup in

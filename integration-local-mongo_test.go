@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 var dbClient *mongo.Client
@@ -26,7 +26,6 @@ func TestMain(m *testing.M) {
 	}
 
 	client, err := mongo.Connect(
-		context.TODO(),
 		options.Client().ApplyURI(mongoURI).SetConnectTimeout(time.Second*5),
 	)
 	if err != nil {
