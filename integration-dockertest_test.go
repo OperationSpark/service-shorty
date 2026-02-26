@@ -50,7 +50,6 @@ func TestMain(m *testing.M) {
 	err = pool.Retry(func() error {
 		var err error
 		dbClient, err = mongo.Connect(
-			context.TODO(),
 			options.Client().ApplyURI(
 				fmt.Sprintf("mongodb://root:password@localhost:%s", resource.GetPort("27017/tcp")),
 			),

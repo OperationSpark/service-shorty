@@ -26,7 +26,6 @@ func TestMain(m *testing.M) {
 	}
 
 	client, err := mongo.Connect(
-		context.TODO(),
 		options.Client().ApplyURI(mongoURI).SetConnectTimeout(time.Second*5),
 	)
 	if err != nil {

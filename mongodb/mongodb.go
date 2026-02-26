@@ -31,7 +31,6 @@ type (
 // NewStore creates an empty Shorty store.
 func NewStore(o StoreOpts) (*Store, error) {
 	client, err := mongo.Connect(
-		context.TODO(),
 		options.Client().ApplyURI(o.URI),
 	)
 	if err != nil {
